@@ -6,7 +6,7 @@ on:
     # guard inside the script — evaluated in Arizona time via the TZ below —
     # makes off-hours runs exit immediately, so it effectively only emails
     # during the window you set in config.json (default Mon-Fri 6am-6pm MST).
-    - cron: "0 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch: {}   # adds a "Run workflow" button in the Actions tab for on-demand tests
 
 jobs:
