@@ -73,6 +73,11 @@ def soap_call(service: str, method: str, params: dict, timeout: int = 120) -> st
         },
         timeout=timeout,
     )
+    if resp.status_code >= 400:
+        # MeridianLink usually returns a SOAP fault body explaining WHY.
+        # Log it before raising so the real reason shows up in the run log.
+        log.error("HTTP %s calling %s/%s. MeridianLink response (first 3000 chars):\n%s",
+                  resp.status_code, service, method, resp.text[:3000])
     resp.raise_for_status()
     root = ET.fromstring(resp.content)
     result = root.find(f".//{{{NS}}}{method}Result")
