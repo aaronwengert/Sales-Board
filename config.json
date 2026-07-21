@@ -1,0 +1,24 @@
+{
+  "platform": {
+    "username": "awengert@oaktreefunding.com",
+    "password": "",
+    "reports": [
+      { "name": "Sales Board New", "include_all_with_access": true }
+    ]
+  },
+  "business_hours": {
+    "weekdays": [0, 1, 2, 3, 4],
+    "start": "06:00",
+    "end": "18:00"
+  },
+  "email": {
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_user": "awengertofc@gmail.com",
+    "smtp_password": "",
+    "from": "awengertofc@gmail.com",
+    "to": ["awengert@oaktreefunding.com"],
+    "subject_template": "Sales Board New",
+    "body_template": "Automated Sales Board export generated {timestamp}."
+  }
+}
