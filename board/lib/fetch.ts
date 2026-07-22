@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import { computeBoard, type BoardData } from "./board";
+import { computeBoard, BOARDS, type BoardData, type Channel } from "./board";
 
 const POWERBI = process.env.POWERBI_FOLDER_ID || "1kNFwyV5Jn-JNtlKdXph2KoWFwwX_A5yk";
 const CALLS = process.env.CALL_REPORTS_FOLDER_ID || "16al-d-n0hlYV_X84pj74ChMR-b-b5nYJ";
@@ -47,14 +47,19 @@ function azTodayStr(): string {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Phoenix" })).toDateString();
 }
 
-const EMPTY: BoardData = {
-  rows: [], today: {}, mtd: {}, callsPending: true,
-  kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0 },
-  updatedLabel: "—",
-  callsUpdatedLabel: "—",
-};
+function emptyBoard(channel: Channel): BoardData {
+  const cfg = BOARDS[channel];
+  return {
+    rows: [], today: {}, mtd: {}, callsPending: true,
+    kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0 },
+    updatedLabel: "—",
+    callsUpdatedLabel: "—",
+    title: cfg.title, goal: cfg.goal, channel,
+  };
+}
 
-export async function getBoard(): Promise<BoardData> {
+export async function getBoard(channel: Channel = "wholesale"): Promise<BoardData> {
+  const EMPTY = emptyBoard(channel);
   if (!hasCreds()) return { ...EMPTY, error: "no-credentials" };
   try {
     const [prodFiles, callFiles] = await Promise.all([listCsvs(POWERBI), listCsvs(CALLS)]);
@@ -75,7 +80,7 @@ export async function getBoard(): Promise<BoardData> {
     }
     const callsLabel = callFile ? azTimeLabel(callFile.modifiedTime) : "—";
 
-    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel);
+    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel);
   } catch (e: any) {
     return { ...EMPTY, error: e?.message || String(e) };
   }

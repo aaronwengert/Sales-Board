@@ -4,7 +4,16 @@ import Papa from "papaparse";
 //  Roster — wholesale teams (count toward the $100M goal) plus the
 //  retail/correspondent desks and former AEs.
 // ─────────────────────────────────────────────────────────────
-type Channel = "wholesale" | "retail" | "correspondent";
+export type Channel = "wholesale" | "retail" | "correspondent";
+
+// Per-channel board configuration. Same tiles/logic; only the label and the
+// monthly funded goal (drives the pace tile) differ.
+export const BOARDS: Record<Channel, { title: string; goal: number }> = {
+  wholesale:     { title: "Wholesale Sales Production",     goal: 100e6 },
+  retail:        { title: "Retail Sales Production",        goal:  20e6 },
+  correspondent: { title: "Correspondent Sales Production", goal:  50e6 },
+};
+
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
   "The Rainmakers": { channel: "wholesale", aes: ["Brian Sherrill","Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
   "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","Jeff Laux","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua"] },
@@ -30,7 +39,14 @@ for (const [t, d] of Object.entries(TEAMS)) { TEAM2CH[t] = d.channel; for (const
 function teamFor(ae: string) { return NAME2TEAM[norm(ae)] || ""; }
 function isFormer(ae: string) { return norm(ae) in FORMER_TEAM; }
 function chanFor(ae: string): Channel | "" { const t = teamFor(ae); return t ? TEAM2CH[t] : ""; }
-function counts(ae: string) { return chanFor(ae) === "wholesale" || isFormer(ae); }
+// An AE belongs on a given channel's board if their team is that channel.
+// Former AEs are a wholesale-only concept (their wholesale funded loans still
+// count toward the $100M goal).
+function counts(ae: string, channel: Channel) {
+  if (chanFor(ae) === channel) return true;
+  if (channel === "wholesale" && isFormer(ae)) return true;
+  return false;
+}
 
 function money(s: string) { const n = parseFloat((s || "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; }
 function mdy(s: string): { m: number; d: number; y: number } | null {
@@ -58,6 +74,9 @@ export type BoardData = {
   };
   updatedLabel: string;
   callsUpdatedLabel: string;
+  title: string;
+  goal: number;
+  channel: Channel;
   error?: string;
 };
 
@@ -71,7 +90,8 @@ function extractProd(csv: string): Record<string, string>[] {
   return parsed.data;
 }
 
-export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string): BoardData {
+export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale"): BoardData {
+  const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = azNow();
   const todayM = az.getMonth() + 1, todayD = az.getDate(), todayY = az.getFullYear();
@@ -96,10 +116,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   for (const r of rd) {
     const name = (r["Lender Account Executive Name"] || "").trim();
     if (!name || !(r["Loan Number"] || "").trim()) continue;
-    if (!counts(name)) {
-      // still track submissions for non-board? no — only board AEs matter for subs columns
-    }
-    const wh = counts(name);
+    const wh = counts(name, channel);
     const st = (r["Loan Status"] || "").trim().toLowerCase();
     const ch = (r["Loan Channel"] || "").trim().toLowerCase();
     const amt = money(r["Total Loan Amount"]);
@@ -111,9 +128,12 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       const a = A(name);
       if (PIPE.has(st)) { a.pipe += amt; pipeAll += amt; if (locked) pipeLocked += amt; }
       else if (CTC.has(st)) { a.ctc += amt; ctcAll += amt; ctcUnits += 1; }
-      else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly) {
+      else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && (channel === "correspondent" || ch !== "correspondent")) {
+        // Correspondent-channel loans don't count toward a non-correspondent AE's
+        // funded production (e.g. a wholesale AE's correspondent loan is excluded
+        // from the $100M goal); on the correspondent board they DO count.
         a.fund += amt; a.units += 1; fundAll += amt; fundUnits += 1;
-        if (ch !== "correspondent") { a.goalElig += amt; eligAll += amt; }
+        a.goalElig += amt; eligAll += amt;
       }
       // MTD subs = Document Check date in the reporting month
       if (dc && dc.m === lm && dc.y === ly) {
@@ -164,5 +184,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     },
     updatedLabel,
     callsUpdatedLabel,
+    title: cfg.title,
+    goal: cfg.goal,
+    channel,
   };
 }

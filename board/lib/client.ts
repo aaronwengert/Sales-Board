@@ -4,7 +4,8 @@ export const CLIENT = `
   var D = (B.rows||[]).slice();
   var TODAY = B.today||{}, MTD_SUBS = B.mtd||{}, K = B.kpi||{};
   var CALLS_PENDING = !!B.callsPending;
-  var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, GOAL=100e6;
+  var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, GOAL=B.goal||100e6;
+  var GOAL_LBL='$'+Math.round(GOAL/1e6)+'M';
   var BROKERS_PENDING=true, YTD_BROKERS={};
   function $(id){return document.getElementById(id);}
   function mM(v){ if(!v) return '$0'; return '$'+(v/1e6).toFixed(2)+'M'; }
@@ -26,6 +27,7 @@ export const CLIENT = `
   $('fctcv').textContent = mM(K.fundedCtc||0);
   $('clocktime').textContent = B.updatedLabel || '—';
   $('callclocktime').textContent = B.callsUpdatedLabel || '—';
+  if($('boardtitle')) $('boardtitle').textContent = B.title || 'Sales Production';
 
   // ---- table ----
   D.sort(function(a,b){return b[7]-a[7];});
@@ -102,7 +104,7 @@ export const CLIENT = `
   $('fdsub').textContent='of '+total+' in '+MONTHS[m];
   $('pacefill').style.width=Math.min(100,fundedPct).toFixed(1)+'%';
   $('pacemk').style.left=pacePct.toFixed(1)+'%';
-  $('fundnote').innerHTML=mM(K.goalElig||0)+' goal-eligible &middot; '+fundedPct.toFixed(1)+'% of $100M &middot; pace ~$'+(paceTarget/1e6).toFixed(2)+'M (funding day '+elapsed+' of '+total+')';
+  $('fundnote').innerHTML=mM(K.goalElig||0)+' goal-eligible &middot; '+fundedPct.toFixed(1)+'% of '+GOAL_LBL+' &middot; pace ~$'+(paceTarget/1e6).toFixed(2)+'M (funding day '+elapsed+' of '+total+')';
   var behind=fundedPct<pacePct, pp=$('pacepill');
   pp.textContent=behind?'BEHIND PACE':'ON PACE';
   pp.className='pill '+(behind?'behind':'ahead');

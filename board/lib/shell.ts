@@ -1,21 +1,22 @@
 export const SHELL = `
 <div class="wrap">
-  <header>
-    <div class="titlewrap">
-      <img class="logo" src="/logo.png" alt="Oaktree Funding Corp">
-      <div class="brand">
-        <h1>Wholesale Sales Production - <span id="titlemonth">—</span></h1>
-        <div class="sub">vs $100M wholesale goal</div>
+  <div class="kpiband">
+    <div class="cluster">
+      <div class="cl-top">
+        <img class="logo" src="/logo.png" alt="Oaktree Funding Corp">
+        <div class="cl-brand">
+          <div class="cl-title" id="boardtitle">—</div>
+          <div class="cl-month" id="titlemonth">—</div>
+        </div>
+      </div>
+      <div class="cl-days">
+        <span class="dl-n tnum" id="fdleft">—</span>
+        <div class="dl-meta">
+          <div class="dl-t">funding days left</div>
+          <div class="dl-sub"><span id="fdsub">—</span> &middot; upd <span id="clocktime">—</span> &middot; calls <span id="callclocktime">—</span></div>
+        </div>
       </div>
     </div>
-    <div class="clock">
-      <div class="daysleft"><span class="dl-n tnum" id="fdleft">—</span><span class="dl-t">funding days left</span><span class="dl-sub" id="fdsub">—</span></div>
-      <div class="u">Last update: <span id="clocktime">—</span></div>
-      <div class="u">Call report: <span id="callclocktime">—</span></div>
-    </div>
-  </header>
-  <div class="kpiband">
-    <div class="kspace"></div>
     <div class="card k-violet kt-today">
       <div class="krow"><span class="klabel">TODAY&rsquo;S GOAL</span><span class="pill subs" id="subpill">—</span></div>
       <div class="big tnum" id="goalpct">—</div>

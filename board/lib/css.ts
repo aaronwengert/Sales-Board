@@ -11,21 +11,24 @@ export const CSS = `
     -webkit-font-smoothing:antialiased;padding:10px 22px}
   .wrap{width:1836px;max-width:100%;margin:0 auto}
   .tnum{font-variant-numeric:tabular-nums}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
-  .titlewrap{display:flex;align-items:center;gap:16px}
-  .logo{height:62px;width:auto;display:block;mix-blend-mode:multiply}
-  .brand{display:flex;flex-direction:column;align-items:flex-start}
-  h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.5px}
-  .sub{margin-top:3px;color:var(--muted);font-size:13px}
-  .clock{text-align:right}
-  .daysleft{display:flex;align-items:baseline;justify-content:flex-end;gap:8px}
-  .daysleft .dl-n{font-size:30px;font-weight:800;letter-spacing:-1px;color:var(--green);line-height:1}
-  .daysleft .dl-t{font-size:15px;font-weight:800;color:var(--ink)}
-  .daysleft .dl-sub{font-size:12px;font-weight:600;color:var(--muted)}
-  .clock .u{color:var(--muted);font-size:12px;margin-top:4px}
   .kpiband{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
-  .kpiband .kspace{flex:0 0 380px}
   .kpiband .card{flex:0 0 auto}
+  .cluster{flex:0 0 380px;display:flex;flex-direction:column;justify-content:space-between;
+    border:1px solid var(--line);border-radius:14px;padding:11px 16px 12px;
+    background:linear-gradient(180deg,#fff 55%,#f5f8fb);box-shadow:0 1px 2px rgba(20,30,50,.05)}
+  .cl-top{display:flex;align-items:center;gap:13px}
+  .logo{height:52px;width:auto;display:block;mix-blend-mode:multiply}
+  .cl-brand{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+  .cl-title{font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.08;color:var(--ink)}
+  .cl-month{margin-top:4px;font-size:16px;font-weight:800;letter-spacing:.2px;color:var(--green);
+    line-height:1;display:inline-flex;align-items:center}
+  .cl-month::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);
+    margin-right:7px;box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 18%,#fff)}
+  .cl-days{display:flex;align-items:center;gap:11px;border-top:1px solid #e2e7ee;padding-top:9px;margin-top:10px}
+  .cl-days .dl-n{font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--green);line-height:1}
+  .cl-days .dl-meta{min-width:0}
+  .cl-days .dl-t{font-size:14px;font-weight:800;color:var(--ink);line-height:1.05}
+  .cl-days .dl-sub{font-size:10.5px;font-weight:600;color:var(--muted);margin-top:3px}
   .kt-today{width:376px}.kt-pipe{width:336px}.kt-funded{width:340px}.kt-ondeck{width:372px}
   .combo .split{display:flex;margin-top:8px}
   .combo .half{flex:1}
