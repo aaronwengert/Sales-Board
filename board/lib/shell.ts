@@ -1,9 +1,12 @@
 export const SHELL = `
 <div class="wrap">
   <header>
-    <div class="brand">
-      <h1>Wholesale Sales Production - <span id="titlemonth">—</span></h1>
-      <div class="sub">vs $100M wholesale goal</div>
+    <div class="titlewrap">
+      <img class="logo" src="/logo.png" alt="Oaktree Funding Corp">
+      <div class="brand">
+        <h1>Wholesale Sales Production - <span id="titlemonth">—</span></h1>
+        <div class="sub">vs $100M wholesale goal</div>
+      </div>
     </div>
     <div class="clock">
       <div class="daysleft"><span class="dl-n tnum" id="fdleft">—</span><span class="dl-t">funding days left</span><span class="dl-sub" id="fdsub">—</span></div>
