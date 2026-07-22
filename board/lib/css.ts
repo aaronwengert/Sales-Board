@@ -92,8 +92,8 @@ export const CSS = `
   .tot{font-weight:800;font-size:12.5px;color:var(--ink)}
   tr.altrow td{background:#f3f6fa}
   .banner{background:#fff7e6;border:1px solid #f0dca6;color:#8a6d1e;border-radius:12px;padding:14px 18px;margin-top:14px;font-size:14px}
-  .pk{padding:1px 8px;border-radius:7px;display:inline-block}
-  .pk-decent{background:#eaf6ef;color:#1c7a45}
-  .pk-good{background:#cdead8;color:#127a3c}
-  .pk-best{background:#a6dcbe;color:#0c5c2e}
+  .pk{padding:1px 8px;border-radius:7px;display:inline-block;font-weight:800}
+  .pk-decent{background:#eddac0;color:#8a5424;box-shadow:inset 0 0 0 1px #dcc09a}   /* bronze  $7.5M+ */
+  .pk-good{background:#e2e7ed;color:#56626f;box-shadow:inset 0 0 0 1px #cdd4dd}     /* silver  $10M+ */
+  .pk-best{background:#f6e39a;color:#7a5f0e;box-shadow:inset 0 0 0 1px #e6cd6a}     /* gold    $15M+ */
 `;
