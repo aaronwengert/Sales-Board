@@ -122,23 +122,30 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const amt = money(r["Total Loan Amount"]);
     const fd = mdy(r["Funded Date"]);
     const locked = (r["Rate Locked Date"] || "").trim() !== "";
-    const dc = mdy(r["Document Check Date"]);
+    const od = mdy(r["Opened Date"]);
+    // Channel gate: correspondent-channel loans don't count on a non-correspondent
+    // board. Retail-channel loans by a wholesale AE DO count (they keep that
+    // production); only correspondent is carved out.
+    const chOk = channel === "correspondent" || ch !== "correspondent";
+
+    // Retail & correspondent desks live earlier in the funnel — count "Registered"
+    // as pipeline there for visibility. Wholesale keeps its stricter pipeline set.
+    const inPipe = PIPE.has(st) || (channel !== "wholesale" && st === "registered");
 
     if (wh) {
       const a = A(name);
-      if (PIPE.has(st)) { a.pipe += amt; pipeAll += amt; if (locked) pipeLocked += amt; }
+      if (inPipe) { a.pipe += amt; pipeAll += amt; if (locked) pipeLocked += amt; }
       else if (CTC.has(st)) { a.ctc += amt; ctcAll += amt; ctcUnits += 1; }
-      else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && (channel === "correspondent" || ch !== "correspondent")) {
-        // Correspondent-channel loans don't count toward a non-correspondent AE's
-        // funded production (e.g. a wholesale AE's correspondent loan is excluded
-        // from the $100M goal); on the correspondent board they DO count.
+      else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
+        // Funded production for the reporting month (correspondent carved out above).
         a.fund += amt; a.units += 1; fundAll += amt; fundUnits += 1;
         a.goalElig += amt; eligAll += amt;
       }
-      // MTD subs = Document Check date in the reporting month
-      if (dc && dc.m === lm && dc.y === ly) {
+      // Subs = loans OPENED in the reporting month (Opened Date). Correspondent
+      // opens are excluded on non-correspondent boards, same as funded.
+      if (od && od.m === lm && od.y === ly && chOk) {
         mtd[name] = (mtd[name] || 0) + 1;
-        if (dc.m === todayM && dc.d === todayD && dc.y === todayY) {
+        if (od.m === todayM && od.d === todayD && od.y === todayY) {
           today[name] = today[name] || [0, 0, 0];
           today[name][2] += 1;
         }
@@ -160,10 +167,13 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     }
   }
 
-  // Board rows: wholesale-team or former AEs with funded production in the month.
+  // Board rows. Wholesale lists AEs who funded in the month. Retail &
+  // correspondent also list AEs who have pipeline or CTC production but haven't
+  // funded yet (smaller desks — show the active book, not just funders).
+  const showActive = channel !== "wholesale";
   const rows: BoardData["rows"] = [];
   for (const [name, a] of Object.entries(ae)) {
-    if (a.units === 0) continue;
+    if (a.units === 0 && !(showActive && (a.pipe > 0 || a.ctc > 0))) continue;
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
