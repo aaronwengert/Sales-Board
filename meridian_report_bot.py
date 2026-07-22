@@ -2,20 +2,25 @@
 """
 meridian_report_bot.py — Pull custom reports from MeridianLink Mortgage
 (formerly LendingQB) via its SOAP web services and email them on a schedule.
+
 Uses the official web services — no browser automation needed:
   AuthService.asmx  GetUserAuthTicket(userName, passWord)      -> ticket
   Reporting.asmx    RetrieveCustomReport(ticket, reportName,
                                          includeAllWithAccess) -> CSV string
+
 The reports must already exist as saved Custom Reports in MeridianLink
 (Reports -> Custom Reports). sQueryNm is the exact saved report name.
+
 Setup:
     pip install requests
+
 Usage:
     python meridian_report_bot.py               # normal run
     python meridian_report_bot.py --dry-run     # fetch reports, don't email
     python meridian_report_bot.py --test-email  # verify SMTP settings only
     python meridian_report_bot.py --force       # ignore business-hours window
 """
+
 import argparse
 import json
 import logging
@@ -26,6 +31,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from email.message import EmailMessage
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -73,12 +79,8 @@ def soap_call(service: str, method: str, params: dict, timeout: int = 120) -> st
         },
         timeout=timeout,
     )
-    if resp.status_code >= 400:
-        # MeridianLink usually returns a SOAP fault body explaining WHY.
-        # Log it before raising so the real reason shows up in the run log.
-        log.error("HTTP %s calling %s/%s. MeridianLink response (first 3000 chars):\n%s",
-                  resp.status_code, service, method, resp.text[:3000])
     resp.raise_for_status()
+
     root = ET.fromstring(resp.content)
     result = root.find(f".//{{{NS}}}{method}Result")
     if result is None or result.text is None:
@@ -112,6 +114,7 @@ def fetch_reports(cfg: dict) -> list[Path]:
     DOWNLOAD_DIR.mkdir(exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
     files: list[Path] = []
+
     for report in cfg["platform"]["reports"]:
         name = report["name"]
         log.info("Retrieving custom report: %s", name)
@@ -125,16 +128,19 @@ def fetch_reports(cfg: dict) -> list[Path]:
         except Exception:
             log.exception("Failed to retrieve report '%s'.", name)
             continue
+
         if csv_text.lstrip().startswith("<") and "error" in csv_text.lower():
             log.error("Report '%s' returned an error payload:\n%s",
                       name, csv_text[:1000])
             continue
+
         safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
         dest = DOWNLOAD_DIR / f"{safe}_{stamp}.csv"
         dest.write_text(csv_text, encoding="utf-8")
         rows = max(csv_text.count("\n") - 1, 0)
         log.info("Saved %s (~%d data rows).", dest.name, rows)
         files.append(dest)
+
     return files
 
 
@@ -142,10 +148,17 @@ def fetch_reports(cfg: dict) -> list[Path]:
 # Business-hours guard
 # ---------------------------------------------------------------------------
 def within_business_hours(cfg: dict) -> bool:
+    """Timezone-aware guard.
+
+    IMPORTANT: uses the timezone named in config (default America/Phoenix),
+    NOT the server's local clock — cloud runners like GitHub Actions run in
+    UTC, which would otherwise shift the window by 7 hours.
+    """
     bh = cfg.get("business_hours")
     if not bh:
         return True
-    now = datetime.now()
+    tz = ZoneInfo(bh.get("timezone", "America/Phoenix"))
+    now = datetime.now(tz)
     if now.weekday() not in bh.get("weekdays", [0, 1, 2, 3, 4]):
         return False
     start = datetime.strptime(bh["start"], "%H:%M").time()
@@ -159,6 +172,7 @@ def within_business_hours(cfg: dict) -> bool:
 def send_email(cfg: dict, attachments: list[Path]) -> None:
     e = cfg["email"]
     now = datetime.now().strftime("%b %d, %Y %I:%M %p")
+
     msg = EmailMessage()
     msg["From"] = e["from"]
     msg["To"] = ", ".join(e["to"])
@@ -166,9 +180,11 @@ def send_email(cfg: dict, attachments: list[Path]) -> None:
     body = e.get("body_template",
                  "Attached: MeridianLink reports generated {timestamp}.")
     msg.set_content(body.format(timestamp=now))
+
     for path in attachments:
         msg.add_attachment(path.read_bytes(), maintype="text", subtype="csv",
                            filename=path.name)
+
     with smtplib.SMTP(e["smtp_host"], e.get("smtp_port", 587)) as s:
         s.starttls()
         s.login(e["smtp_user"], e["smtp_password"])
@@ -228,7 +244,6 @@ def main() -> int:
     except Exception:
         log.exception("Email send failed.")
         return 1
-
     return 0
 
 
