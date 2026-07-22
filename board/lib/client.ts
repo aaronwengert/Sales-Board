@@ -29,17 +29,24 @@ export const CLIENT = `
 
   // ---- table ----
   D.sort(function(a,b){return b[7]-a[7];});
-  var h='', metCount=0, subsToday=0;
-  h+='<tr><th class="l"></th>'
-   +'<th class="grouphdr gh0 gstart" colspan="4">TODAY</th>'
-   +'<th class="grouphdr gh1 gstart" colspan="3">ACTIVITY &amp; PIPELINE</th>'
-   +'<th class="grouphdr gh2 gstart" colspan="3">FUNDED PRODUCTION</th>'
-   +'<th class="grouphdr gh3 gstart" colspan="2">ON DECK</th></tr>';
-  h+='<tr><th class="l">AE</th>'
-   +'<th class="gstart">OUT CALLS</th><th>TALK MIN</th><th>SUBS</th><th>GOAL</th>'
-   +'<th class="gstart">MTD SUBS</th><th>PIPELINE</th><th>YTD BROKERS</th>'
-   +'<th class="gstart">UNITS</th><th>FUNDED / $3M</th><th>AVG FUNDED</th>'
-   +'<th class="gstart">CTC+</th><th>TOTAL</th></tr>';
+  var sp='<td class="sp"></td>';
+  var h='<colgroup>'
+   +'<col style="width:380px"><col style="width:8px">'
+   +'<col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:8px">'
+   +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:8px">'
+   +'<col style="width:76px"><col style="width:158px"><col style="width:106px"><col style="width:8px">'
+   +'<col style="width:186px"><col style="width:186px"></colgroup>';
+  var metCount=0, subsToday=0;
+  h+='<tr><th class="l"></th>'+sp
+   +'<th class="grouphdr gh0" colspan="4">TODAY</th>'+sp
+   +'<th class="grouphdr gh1" colspan="3">ACTIVITY &amp; PIPELINE</th>'+sp
+   +'<th class="grouphdr gh2" colspan="3">FUNDED PRODUCTION</th>'+sp
+   +'<th class="grouphdr gh3" colspan="2">ON DECK</th></tr>';
+  h+='<tr><th class="l">AE</th>'+sp
+   +'<th>OUT CALLS</th><th>TALK MIN</th><th>SUBS</th><th>GOAL</th>'+sp
+   +'<th>MTD SUBS</th><th>PIPELINE</th><th>YTD BROKERS</th>'+sp
+   +'<th>UNITS</th><th>FUNDED / $3M</th><th>AVG FUNDED</th>'+sp
+   +'<th>CTC+</th><th>TOTAL</th></tr>';
   D.forEach(function(r,i){
     var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7];
     var fp=Math.min(100,Math.round(f/3e6*100));
@@ -54,18 +61,18 @@ export const CLIENT = `
     var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
     var talkTxt =CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
-     +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'
-     +'<td class="gstart">'+callsTxt+'</td>'
+     +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
+     +'<td>'+callsTxt+'</td>'
      +'<td>'+talkTxt+'</td>'
      +'<td><span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span></td>'
-     +'<td>'+(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>')+'</td>'
-     +'<td class="gstart"><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
+     +'<td>'+(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>')+'</td>'+sp
+     +'<td><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
      +'<td><span class="mval'+pk+'">'+mM(pipe)+'</span></td>'
-     +'<td>'+(BROKERS_PENDING?'<span class="pend">&ndash;</span>':'<span class="mval">'+(YTD_BROKERS[n]||0)+'</span>')+'</td>'
-     +'<td class="gstart"><span class="mval">'+u+'</span></td>'
+     +'<td>'+(BROKERS_PENDING?'<span class="pend">&ndash;</span>':'<span class="mval">'+(YTD_BROKERS[n]||0)+'</span>')+'</td>'+sp
+     +'<td><span class="mval">'+u+'</span></td>'
      +'<td>'+fcell+'</td>'
-     +'<td><span class="mval">'+mK(avg)+'</span></td>'
-     +'<td class="gstart"><span class="mval'+(ctc?'':' z')+'">'+mM(ctc)+'</span></td>'
+     +'<td><span class="mval">'+mK(avg)+'</span></td>'+sp
+     +'<td><span class="mval'+(ctc?'':' z')+'">'+mM(ctc)+'</span></td>'
      +'<td><span class="tot">'+mM(tot)+'</span></td>'
      +'</tr>';
   });

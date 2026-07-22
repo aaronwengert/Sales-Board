@@ -9,9 +9,11 @@ export const CSS = `
   body{margin:0;background:var(--page);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;padding:10px 22px}
-  .wrap{max-width:1880px;margin:0 auto}
+  .wrap{width:1836px;max-width:100%;margin:0 auto}
   .tnum{font-variant-numeric:tabular-nums}
   header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+  .titlewrap{display:flex;align-items:center;gap:16px}
+  .logo{height:62px;width:auto;display:block;mix-blend-mode:multiply}
   .brand{display:flex;flex-direction:column;align-items:flex-start}
   h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.5px}
   .sub{margin-top:3px;color:var(--muted);font-size:13px}
@@ -21,7 +23,10 @@ export const CSS = `
   .daysleft .dl-t{font-size:15px;font-weight:800;color:var(--ink)}
   .daysleft .dl-sub{font-size:12px;font-weight:600;color:var(--muted)}
   .clock .u{color:var(--muted);font-size:12px;margin-top:4px}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
+  .kpiband{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
+  .kpiband .kspace{flex:0 0 380px}
+  .kpiband .card{flex:0 0 auto}
+  .kt-today{width:376px}.kt-pipe{width:336px}.kt-funded{width:340px}.kt-ondeck{width:372px}
   .combo .split{display:flex;margin-top:8px}
   .combo .half{flex:1}
   .combo .half+.half{border-left:1px solid #f0e2c9;padding-left:14px}
@@ -60,13 +65,15 @@ export const CSS = `
   .pacebar>i{display:block;height:100%;border-radius:6px;background:var(--green)}
   .pacebar .mk{position:absolute;top:-3px;bottom:-3px;width:2px;background:#2c3a52;opacity:.6}
   .pnote{margin-top:5px;color:var(--muted);font-size:11px}
-  .goals{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px 10px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
-  table{width:100%;border-collapse:separate;border-spacing:0}
+  .goals{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 0 8px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}
+  .sp{padding:0!important;border:0!important;background:transparent!important}
   th{font-size:9.5px;font-weight:700;letter-spacing:.3px;color:var(--muted);text-align:center;padding:5px 5px}
-  th.l{text-align:left}
+  th.l{text-align:left;padding-left:16px}
+  th:last-child,td:last-child{padding-right:16px}
   .grouphdr{font-size:10px;font-weight:800;letter-spacing:.6px;padding:5px 6px;text-align:center;border-radius:8px 8px 0 0}
   td{padding:2px 5px;text-align:center;border-top:1px solid #eef1f5;vertical-align:middle}
-  td.l{text-align:left;white-space:nowrap}
+  td.l{text-align:left;white-space:nowrap;padding-left:16px}
   .grouphdr.gh0{background:#6b4fbb;color:#fff}
   .grouphdr.gh1{background:#2a5bbf;color:#fff}
   .grouphdr.gh2{background:#1a9e4e;color:#fff}
