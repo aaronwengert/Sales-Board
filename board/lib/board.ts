@@ -63,7 +63,7 @@ function azDateOf(iso: string): { m: number; d: number; y: number } {
 }
 
 export type BoardData = {
-  rows: [string, string, number, number, number, number, number, number][];
+  rows: [string, string, number, number, number, number, number, number, number][];
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
   callsPending: boolean;
@@ -105,11 +105,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   }
   const [ly, lm] = latestKey ? latestKey.split("-").map(Number) : [todayY, todayM];
 
-  type Agg = { pipe: number; ctc: number; fund: number; units: number; goalElig: number; total: number };
+  type Agg = { pipe: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
-  const A = (n: string) => (ae[n] ||= { pipe: 0, ctc: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const A = (n: string) => (ae[n] ||= { pipe: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
 
   let pipeAll = 0, pipeLocked = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
 
@@ -135,7 +135,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     if (wh) {
       const a = A(name);
       if (inPipe) { a.pipe += amt; pipeAll += amt; if (locked) pipeLocked += amt; }
-      else if (CTC.has(st)) { a.ctc += amt; ctcAll += amt; ctcUnits += 1; }
+      else if (CTC.has(st)) { a.ctc += amt; a.ctcU += 1; ctcAll += amt; ctcUnits += 1; }
       else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
         // Funded production for the reporting month (correspondent carved out above).
         a.fund += amt; a.units += 1; fundAll += amt; fundUnits += 1;
@@ -177,7 +177,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
-    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total]);
+    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU]);
   }
   rows.sort((x, y) => y[7] - x[7]);
 

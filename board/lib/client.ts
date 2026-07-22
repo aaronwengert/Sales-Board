@@ -37,20 +37,20 @@ export const CLIENT = `
    +'<col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:8px">'
    +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:158px"><col style="width:106px"><col style="width:8px">'
-   +'<col style="width:186px"><col style="width:186px"></colgroup>';
+   +'<col style="width:76px"><col style="width:148px"><col style="width:148px"></colgroup>';
   var metCount=0, subsToday=0;
   h+='<tr><th class="l"></th>'+sp
    +'<th class="grouphdr gh0" colspan="4">TODAY</th>'+sp
    +'<th class="grouphdr gh1" colspan="3">ACTIVITY &amp; PIPELINE</th>'+sp
    +'<th class="grouphdr gh2" colspan="3">FUNDED PRODUCTION</th>'+sp
-   +'<th class="grouphdr gh3" colspan="2">ON DECK</th></tr>';
+   +'<th class="grouphdr gh3" colspan="3">ON DECK</th></tr>';
   h+='<tr><th class="l">AE</th>'+sp
    +'<th>OUT CALLS</th><th>TALK MIN</th><th>SUBS</th><th>GOAL</th>'+sp
    +'<th>MTD SUBS</th><th>PIPELINE</th><th>YTD BROKERS</th>'+sp
    +'<th>UNITS</th><th>FUNDED / $3M</th><th>AVG FUNDED</th>'+sp
-   +'<th>CTC+</th><th>TOTAL</th></tr>';
+   +'<th>UNITS</th><th>CTC+</th><th>TOTAL</th></tr>';
   D.forEach(function(r,i){
-    var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7];
+    var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
     var fp=Math.min(100,Math.round(f/3e6*100));
     var fcell = f>=3e6 ? '<div class="circle">'+mM(f)+'</div>'
       : '<span class="frow"><span class="mval">'+mM(f)+'</span><span class="g5bar"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="g5pct">'+fp+'%</span></span>';
@@ -74,6 +74,7 @@ export const CLIENT = `
      +'<td><span class="mval">'+u+'</span></td>'
      +'<td>'+fcell+'</td>'
      +'<td><span class="mval">'+mK(avg)+'</span></td>'+sp
+     +'<td><span class="mval'+(ctcU?'':' z')+'">'+ctcU+'</span></td>'
      +'<td><span class="mval'+(ctc?'':' z')+'">'+mM(ctc)+'</span></td>'
      +'<td><span class="tot">'+mM(tot)+'</span></td>'
      +'</tr>';
