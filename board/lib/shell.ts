@@ -1,4 +1,5 @@
 export const SHELL = `
+<div id="fithost">
 <div class="wrap">
   <div class="kpiband">
     <div class="cluster">
@@ -47,4 +48,6 @@ export const SHELL = `
   </div>
   <div class="goals"><table id="tbl"></table></div>
 </div>
+</div>
+<div id="mroot" class="mroot"></div>
 `;

@@ -110,6 +110,64 @@ export const CLIENT = `
   pp.textContent=behind?'BEHIND PACE':'ON PACE';
   pp.className='pill '+(behind?'behind':'ahead');
 
+  // ---- mobile stacked view (shown < 768px via CSS media query) ----
+  (function(){
+    var mr = $('mroot'); if(!mr) return;
+    if(!D.length){
+      mr.innerHTML = '<div class="mhdr"><div class="t1">'+(B.title||'Sales Production')+'</div></div>'
+        +'<div class="banner">'+(B.error==='no-credentials'?'Waiting on credentials — add the service account env vars in Vercel and redeploy.':'Waiting for the first Sales Board file to appear in Drive.')+'</div>';
+      return;
+    }
+    var lp2 = Math.round(K.lockedPct||0);
+    var hdr = '<div class="mhdr"><div class="t1">'+(B.title||'Sales Production')+'</div>'
+      +'<div class="t2">'+MONTHS[m]+' '+y+'</div>'
+      +'<div class="mdays"><span class="n tnum">'+remaining+'</span><div><div class="dt">funding days left</div>'
+      +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div></div>';
+    var tiles = '<div class="kpi">'
+      +'<div class="tile tv"><div class="lab">TODAY&rsquo;S GOAL</div><div class="big tnum">'+pct+'%</div><div class="pbar"><i style="width:'+pct+'%"></i></div><div class="sub">'+metCount+' of '+D.length+' hit'+(CALLS_PENDING?' &middot; calls pending':'')+'</div></div>'
+      +'<div class="tile tp"><div class="lab">PIPELINE</div><div class="big tnum">'+mM(K.pipeline||0)+'</div><div class="sub">'+mM(K.pipeLocked||0)+' locked &middot; '+lp2+'%<br>'+mtdTotal+' MTD subs</div></div>'
+      +'<div class="tile tf"><div class="lab">FUNDED</div><div class="big tnum">'+mM(K.funded||0)+' <span>&middot; '+(K.fundedUnits||0)+'</span></div><div class="pbar"><i style="width:'+Math.min(100,fundedPct).toFixed(1)+'%"></i></div><div class="sub">'+fundedPct.toFixed(1)+'% of '+GOAL_LBL+' &middot; '+(behind?'behind pace':'on pace')+'</div></div>'
+      +'<div class="tile to"><div class="lab">ON DECK</div><div class="big tnum">'+mM(K.ctc||0)+' <span>&middot; '+(K.ctcUnits||0)+'</span></div><div class="odtot"><span class="odk">FUNDED &amp; CTC+</span><span class="odv">'+mM(K.fundedCtc||0)+'</span></div></div>'
+      +'</div>';
+    var cards = '';
+    D.forEach(function(r,i){
+      var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
+      var fp=Math.min(100,Math.round(f/3e6*100));
+      var td=TODAY[n]||[0,0,0];
+      var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL;
+      var met=cHit||tHit||sHit;
+      cards+='<div class="mc"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
+        +'<div class="mc-nm"><div class="nm">'+n+'</div><div class="tm">'+tm+'</div></div>'
+        +'<div class="mc-tot"><div class="tl">TOTAL</div><div class="tv">'+mM(tot)+'</div></div></div>'
+        +'<div class="mc-g">'
+        +'<div class="st sg"><div class="k">FUNDED</div><div class="v">'+mM(f)+'</div><div class="u">'+u+' unit'+(u===1?'':'s')+'</div><div class="bar"><i style="width:'+fp+'%"></i></div></div>'
+        +'<div class="st sb"><div class="k">PIPELINE</div><div class="v">'+mM(pipe)+'</div><div class="u">&nbsp;</div></div>'
+        +'<div class="st sa"><div class="k">CTC+</div><div class="v">'+mM(ctc)+'</div><div class="u">'+ctcU+' unit'+(ctcU===1?'':'s')+'</div></div>'
+        +'</div>'
+        +'<div class="mc-f"><span class="chip">MTD subs &middot; '+(MTD_SUBS[n]||0)+'</span>'
+        +'<span class="chip">'+(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today')+'</span>'
+        +'<span class="chip">Avg '+mK(avg)+'</span></div></div>';
+    });
+    mr.innerHTML = hdr + tiles + '<div class="seclabel">AE PRODUCTION &middot; '+D.length+' REPS</div>' + cards;
+  })();
+
+  // ---- scale-to-fit: shrink the fixed 1836px board to any narrower screen ----
+  var BOARD_W = 1836;
+  function fitBoard(){
+    var host = $('fithost'); var wrap = document.querySelector('.wrap');
+    if(!host || !wrap || !host.clientWidth) return;   // hidden on mobile → skip
+    wrap.style.transform = 'none';                 // reset to measure natural height
+    var avail = host.clientWidth;
+    var scale = Math.min(1, avail / BOARD_W);
+    wrap.style.transformOrigin = 'top left';
+    wrap.style.transform = 'scale(' + scale + ')';
+    wrap.style.marginLeft = Math.max(0, (avail - BOARD_W * scale) / 2) + 'px';
+    host.style.height = (wrap.offsetHeight * scale) + 'px';
+  }
+  window.addEventListener('resize', fitBoard);
+  window.addEventListener('load', fitBoard);
+  fitBoard();
+
   setTimeout(function(){location.reload();}, 300000); // refresh every 5 min
 })();
 `;
