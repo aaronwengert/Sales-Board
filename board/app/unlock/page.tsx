@@ -33,9 +33,10 @@ export default function Unlock() {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
       background: "#e9edf3", fontFamily: 'system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
-      padding: "20px",
+      padding: "20px", overflowY: "auto",
     }}>
       <form onSubmit={submit} style={{
         width: "340px", maxWidth: "100%", background: "#fff", border: "1px solid #e5e9f0",
