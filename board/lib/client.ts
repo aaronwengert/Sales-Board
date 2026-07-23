@@ -11,6 +11,13 @@ export const CLIENT = `
   function mM(v){ if(!v) return '$0'; return '$'+(v/1e6).toFixed(2)+'M'; }
   function mK(v){ if(!v) return '$0'; return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : '$'+Math.round(v/1000)+'K'; }
   function mixAG(p){ var a=[224,138,23],g=[26,158,78],c=a.map(function(x,i){return Math.round(x+(g[i]-x)*(p/100));}); return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
+  // Team accent colors (distinct hues; used for the left stripe on rows/cards).
+  var TEAMCOLORS={
+    'The Rainmakers':'#2a78d6','Cash Flow Commanders':'#1baf7a','Cash Flow Cowboys':'#eb6834',
+    'CTC Crusaders':'#4a3aa7','Lien Kings':'#eda100','Bone Crushers':'#e34948',
+    'Retail':'#e87ba4','Correspondent':'#008300'
+  };
+  function teamColor(tm){ var base=(tm||'').replace(/\\s*·.*$/,'').trim(); return TEAMCOLORS[base]||'#c3ccd9'; }
 
   if(!D.length){
     $('titlemonth').textContent = '';
@@ -63,7 +70,7 @@ export const CLIENT = `
     var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
     var talkTxt =CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
-     +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
+     +'<td class="l" style="box-shadow:inset 4px 0 0 '+teamColor(tm)+'"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
      +'<td>'+callsTxt+'</td>'
      +'<td>'+talkTxt+'</td>'
      +'<td><span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span></td>'
@@ -136,7 +143,7 @@ export const CLIENT = `
       var td=TODAY[n]||[0,0,0];
       var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL;
       var met=cHit||tHit||sHit;
-      cards+='<div class="mc"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
+      cards+='<div class="mc" style="--tc:'+teamColor(tm)+'"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
         +'<div class="mc-nm"><div class="nm">'+n+'</div><div class="tm">'+tm+'</div></div>'
         +'<div class="mc-tot"><div class="tl">TOTAL</div><div class="tv">'+mM(tot)+'</div></div></div>'
         +'<div class="mc-g">'

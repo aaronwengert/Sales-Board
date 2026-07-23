@@ -71,8 +71,10 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
     }
     if (!prodFile) return { ...EMPTY, error: "no-production" };
 
-    // Newest "Users Summary" call report.
-    const callFile = callFiles.find((f) => /users summary/i.test(f.name)) || null;
+    // Newest "Users Summary" call report. Match is separator-tolerant so it
+    // catches both "Users Summary_….csv" (space) and "users_summary_….csv"
+    // (underscore) — the export's filename format changed 2026-07-23.
+    const callFile = callFiles.find((f) => /users[^a-z0-9]*summary/i.test(f.name)) || null;
     let callsCsv: string | null = null, callsIsToday = false;
     if (callFile) {
       callsCsv = await download(callFile.id);

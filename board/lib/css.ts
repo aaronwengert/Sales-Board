@@ -142,7 +142,8 @@ export const CSS = `
   .mroot .odtot .odk{font-size:9.5px;font-weight:800;letter-spacing:.3px;color:var(--muted)}
   .mroot .odtot .odv{font-size:18px;font-weight:800;color:var(--amber-ink);line-height:1}
   .mroot .seclabel{font-size:11px;font-weight:800;letter-spacing:.6px;color:#6b7686;margin:4px 2px 7px}
-  .mroot .mc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  .mroot .mc{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px 11px 15px;margin-bottom:8px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  .mroot .mc::before{content:"";position:absolute;top:0;bottom:0;left:0;width:4px;background:var(--tc,#c3ccd9)}
   .mroot .mc-h{display:flex;align-items:center;gap:9px}
   .mroot .rk{flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:#eef1f6;color:#5c6a7a;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
   .mroot .mc-nm{flex:1;min-width:0}
@@ -152,10 +153,14 @@ export const CSS = `
   .mroot .mc-tot .tl{font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.4px}
   .mroot .mc-tot .tv{font-size:17px;font-weight:800;color:var(--ink);line-height:1}
   .mroot .mc-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:9px}
-  .mroot .st{border-radius:10px;padding:7px 8px;background:#f7f9fc}
+  .mroot .st{position:relative;overflow:hidden;border-radius:10px;padding:9px 8px 7px;background:#f7f9fc}
+  .mroot .st::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--stac,#cfd6df)}
   .mroot .st .k{font-size:9px;font-weight:800;letter-spacing:.3px;color:var(--muted)}
   .mroot .st .v{font-size:14px;font-weight:800;margin-top:2px;line-height:1}
   .mroot .st .u{font-size:9.5px;color:var(--muted);margin-top:2px}
+  .mroot .st.sg{--stac:#1a9e4e}
+  .mroot .st.sb{--stac:#2a5bbf}
+  .mroot .st.sa{--stac:#e08a17}
   .mroot .st.sg .v{color:var(--green-ink)}
   .mroot .st.sb .v{color:var(--b)}
   .mroot .st.sa .v{color:var(--amber-ink)}
