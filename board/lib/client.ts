@@ -7,11 +7,14 @@ export const CLIENT = `
   var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, GOAL=B.goal||100e6;
   var GOAL_LBL='$'+Math.round(GOAL/1e6)+'M';
   var BROKERS_PENDING=true, YTD_BROKERS={};
+  var TIX_PENDING=true, TIX_TODAY={};   // daily Tix per AE — feed not wired yet
+  // Rescission deadline per reporting month, keyed "YYYY-MM" (edit as dates arrive).
+  var RESCISSION={ /* '2026-07':'Jul 28' */ };
   function $(id){return document.getElementById(id);}
   function mM(v){ if(!v) return '$0'; return '$'+(v/1e6).toFixed(2)+'M'; }
   function mK(v){ if(!v) return '$0'; return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : '$'+Math.round(v/1000)+'K'; }
   function mixAG(p){ var a=[224,138,23],g=[26,158,78],c=a.map(function(x,i){return Math.round(x+(g[i]-x)*(p/100));}); return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
-  // Team accent colors (distinct hues; used for the left stripe on rows/cards).
+  // Team accent colors (distinct hues) — kept for future per-team styling.
   var TEAMCOLORS={
     'The Rainmakers':'#2a78d6','Cash Flow Commanders':'#1baf7a','Cash Flow Cowboys':'#eb6834',
     'CTC Crusaders':'#4a3aa7','Lien Kings':'#eda100','Bone Crushers':'#e34948',
@@ -41,18 +44,18 @@ export const CLIENT = `
   var sp='<td class="sp"></td>';
   var h='<colgroup>'
    +'<col style="width:380px"><col style="width:8px">'
-   +'<col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:94px"><col style="width:8px">'
+   +'<col style="width:76px"><col style="width:76px"><col style="width:72px"><col style="width:76px"><col style="width:76px"><col style="width:8px">'
    +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:158px"><col style="width:106px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:148px"><col style="width:148px"></colgroup>';
   var metCount=0, subsToday=0;
   h+='<tr><th class="l"></th>'+sp
-   +'<th class="grouphdr gh0" colspan="4">TODAY</th>'+sp
+   +'<th class="grouphdr gh0" colspan="5">TODAY</th>'+sp
    +'<th class="grouphdr gh1" colspan="3">ACTIVITY &amp; PIPELINE</th>'+sp
    +'<th class="grouphdr gh2" colspan="3">FUNDED PRODUCTION</th>'+sp
    +'<th class="grouphdr gh3" colspan="3">ON DECK</th></tr>';
   h+='<tr><th class="l">AE</th>'+sp
-   +'<th>OUT CALLS</th><th>TALK MIN</th><th>SUBS</th><th>GOAL</th>'+sp
+   +'<th>OUT CALLS</th><th>TALK MIN</th><th>TIX</th><th>SUBS</th><th>GOAL</th>'+sp
    +'<th>MTD SUBS</th><th>PIPELINE</th><th>YTD BROKERS</th>'+sp
    +'<th>UNITS</th><th>FUNDED / $3M</th><th>AVG FUNDED</th>'+sp
    +'<th>UNITS</th><th>CTC+</th><th>TOTAL</th></tr>';
@@ -69,10 +72,12 @@ export const CLIENT = `
     var met=cHit||tHit||sHit; if(met) metCount++;
     var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
     var talkTxt =CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
+    var tixTxt  =TIX_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub">'+(TIX_TODAY[n]||0)+'</span>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
-     +'<td class="l" style="box-shadow:inset 4px 0 0 '+teamColor(tm)+'"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
+     +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
      +'<td>'+callsTxt+'</td>'
      +'<td>'+talkTxt+'</td>'
+     +'<td>'+tixTxt+'</td>'
      +'<td><span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span></td>'
      +'<td>'+(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>')+'</td>'+sp
      +'<td><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
@@ -87,6 +92,7 @@ export const CLIENT = `
      +'</tr>';
   });
   var tbl=$('tbl'); if(tbl) tbl.innerHTML=h;
+
   var denom=D.length||1;
   var pct=Math.round(metCount/denom*100);
   $('goalpct').textContent=pct+'%';
@@ -110,6 +116,8 @@ export const CLIENT = `
   $('titlemonth').textContent=MONTHS[m]+' '+y;
   $('fdleft').textContent=remaining;
   $('fdsub').textContent='of '+total+' in '+MONTHS[m];
+  var ymKey=y+'-'+String(m+1).padStart(2,'0');
+  if(RESCISSION[ymKey]){ if($('rescdate'))$('rescdate').textContent=RESCISSION[ymKey]; if($('rescwrap'))$('rescwrap').style.display=''; }
   $('pacefill').style.width=Math.min(100,fundedPct).toFixed(1)+'%';
   $('pacemk').style.left=pacePct.toFixed(1)+'%';
   $('fundnote').innerHTML=mM(K.goalElig||0)+' goal-eligible &middot; '+fundedPct.toFixed(1)+'% of '+GOAL_LBL+' &middot; pace ~$'+(paceTarget/1e6).toFixed(2)+'M (funding day '+elapsed+' of '+total+')';
@@ -126,10 +134,11 @@ export const CLIENT = `
       return;
     }
     var lp2 = Math.round(K.lockedPct||0);
+    var rescM = RESCISSION[ymKey] ? '<div class="mresc">Rescission deadline &middot; '+RESCISSION[ymKey]+'</div>' : '';
     var hdr = '<div class="mhdr"><div class="t1">'+(B.title||'Sales Production')+'</div>'
       +'<div class="t2">'+MONTHS[m]+' '+y+'</div>'
       +'<div class="mdays"><span class="n tnum">'+remaining+'</span><div><div class="dt">funding days left</div>'
-      +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div></div>';
+      +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div>'+rescM+'</div>';
     var tiles = '<div class="kpi">'
       +'<div class="tile tv"><div class="lab">TODAY&rsquo;S GOAL</div><div class="big tnum">'+pct+'%</div><div class="pbar"><i style="width:'+pct+'%"></i></div><div class="sub">'+metCount+' of '+D.length+' hit'+(CALLS_PENDING?' &middot; calls pending':'')+'</div></div>'
       +'<div class="tile tp"><div class="lab">PIPELINE</div><div class="big tnum">'+mM(K.pipeline||0)+'</div><div class="sub">'+mM(K.pipeLocked||0)+' locked &middot; '+lp2+'%<br>'+mtdTotal+' MTD subs</div></div>'
@@ -143,7 +152,7 @@ export const CLIENT = `
       var td=TODAY[n]||[0,0,0];
       var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL;
       var met=cHit||tHit||sHit;
-      cards+='<div class="mc" style="--tc:'+teamColor(tm)+'"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
+      cards+='<div class="mc"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
         +'<div class="mc-nm"><div class="nm">'+n+'</div><div class="tm">'+tm+'</div></div>'
         +'<div class="mc-tot"><div class="tl">TOTAL</div><div class="tv">'+mM(tot)+'</div></div></div>'
         +'<div class="mc-g">'
@@ -152,6 +161,7 @@ export const CLIENT = `
         +'<div class="st sa"><div class="k">CTC+</div><div class="v">'+mM(ctc)+'</div><div class="u">'+ctcU+' unit'+(ctcU===1?'':'s')+'</div></div>'
         +'</div>'
         +'<div class="mc-f"><span class="chip">MTD subs &middot; '+(MTD_SUBS[n]||0)+'</span>'
+        +'<span class="chip">Tix &middot; '+(TIX_PENDING?'&ndash;':(TIX_TODAY[n]||0))+'</span>'
         +'<span class="chip">'+(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today')+'</span>'
         +'<span class="chip">Avg '+mK(avg)+'</span></div></div>';
     });

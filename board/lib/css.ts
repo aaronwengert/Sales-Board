@@ -31,6 +31,8 @@ export const CSS = `
   .cl-days .dl-meta{min-width:0}
   .cl-days .dl-t{font-size:14px;font-weight:800;color:var(--ink);line-height:1.05}
   .cl-days .dl-sub{font-size:10.5px;font-weight:600;color:var(--muted);margin-top:3px}
+  .dl-resc{display:inline-flex;align-items:center;margin-top:6px;font-size:11px;font-weight:800;
+    color:var(--amber-ink);background:var(--amber-soft);border-radius:7px;padding:2px 8px;letter-spacing:.2px}
   .kt-today{width:376px}.kt-pipe{width:336px}.kt-funded{width:340px}.kt-ondeck{width:372px}
   .combo .split{display:flex;margin-top:8px}
   .combo .half{flex:1}
@@ -142,8 +144,7 @@ export const CSS = `
   .mroot .odtot .odk{font-size:9.5px;font-weight:800;letter-spacing:.3px;color:var(--muted)}
   .mroot .odtot .odv{font-size:18px;font-weight:800;color:var(--amber-ink);line-height:1}
   .mroot .seclabel{font-size:11px;font-weight:800;letter-spacing:.6px;color:#6b7686;margin:4px 2px 7px}
-  .mroot .mc{position:relative;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px 11px 15px;margin-bottom:8px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
-  .mroot .mc::before{content:"";position:absolute;top:0;bottom:0;left:0;width:4px;background:var(--tc,#c3ccd9)}
+  .mroot .mc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
   .mroot .mc-h{display:flex;align-items:center;gap:9px}
   .mroot .rk{flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:#eef1f6;color:#5c6a7a;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
   .mroot .mc-nm{flex:1;min-width:0}
@@ -170,4 +171,6 @@ export const CSS = `
   .mroot .chip{font-size:10.5px;color:#5c6a7a;background:#f2f5f9;border-radius:20px;padding:3px 9px;font-weight:600}
   .mroot .chip .hit{color:var(--green-ink)}
   .mroot .banner{background:#fff7e6;border:1px solid #f0dca6;color:#8a6d1e;border-radius:12px;padding:14px 16px;font-size:14px;margin-top:8px}
+  .mroot .mresc{display:inline-flex;align-items:center;margin-top:9px;font-size:11.5px;font-weight:800;
+    color:var(--amber-ink);background:var(--amber-soft);border-radius:8px;padding:3px 10px}
 `;

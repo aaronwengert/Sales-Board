@@ -15,6 +15,7 @@ export const SHELL = `
         <div class="dl-meta">
           <div class="dl-t">funding days left</div>
           <div class="dl-sub"><span id="fdsub">—</span> &middot; upd <span id="clocktime">—</span> &middot; calls <span id="callclocktime">—</span></div>
+          <div class="dl-resc" id="rescwrap" style="display:none">Rescission deadline &middot; <span id="rescdate">—</span></div>
         </div>
       </div>
     </div>
