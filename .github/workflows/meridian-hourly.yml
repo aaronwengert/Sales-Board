@@ -1,8 +1,10 @@
 name: MeridianLink hourly export
 
+# Triggered hourly by an external scheduler (cron-job.org) via the GitHub API,
+# plus a manual "Run workflow" button. No `schedule:` block — cron-job.org is the
+# single, reliable trigger, which avoids double-firing (and GitHub's 60-day
+# auto-disable of scheduled workflows).
 on:
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       force:
