@@ -15,12 +15,12 @@ export const BOARDS: Record<Channel, { title: string; goal: number }> = {
 };
 
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
-  "The Rainmakers": { channel: "wholesale", aes: ["Brian Sherrill","Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
+  "The Rainmakers": { channel: "wholesale", aes: ["Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
   "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","Jeff Laux","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua"] },
   "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Jeremy Rohrer","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby"] },
-  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
+  "CTC Crusaders": { channel: "wholesale", aes: ["Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
   "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Alfredo Sanchez","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith"] },
-  "Bone Crushers": { channel: "wholesale", aes: ["Mike Ernst","Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
+  "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
   "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins","Darin Judis","Dianne Minor","Todd Lautzenheiser"] },
 };
@@ -28,21 +28,46 @@ const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
 // goal, and they show on the board (tagged "· former") any month they funded.
 const FORMER_TEAM: Record<string, string> = { "aj laux": "The Rainmakers", "amari aiu": "The Rainmakers" };
 
+// Scheduled removals: each AE drops off the board on/after this Arizona date —
+// no longer seeded, counted, or shown. Set for reps leaving on a known date so
+// the removal happens automatically without a redeploy.
+const RETIRE: Record<string, string> = {
+  "aj laux": "2026-08-01",
+  "adam paniagua": "2026-08-01",
+};
+
 const PIPE = new Set(["approved","condition review","in underwriting","final underwriting"]);
 const CTC = new Set(["clear to close","docs out","docs back","docs ordered"]);
 const FUND = new Set(["funded","loan shipped","in purchase review","in final purchase review","ready for sale"]);
 
 function norm(s: string) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); }
 const NAME2TEAM: Record<string, string> = {};
+const NAME2DISPLAY: Record<string, string> = {};
 const TEAM2CH: Record<string, Channel> = {};
-for (const [t, d] of Object.entries(TEAMS)) { TEAM2CH[t] = d.channel; for (const a of d.aes) NAME2TEAM[norm(a)] = t; }
+for (const [t, d] of Object.entries(TEAMS)) { TEAM2CH[t] = d.channel; for (const a of d.aes) { NAME2TEAM[norm(a)] = t; NAME2DISPLAY[norm(a)] = a; } }
 function teamFor(ae: string) { return NAME2TEAM[norm(ae)] || ""; }
+// Canonical display spelling: the production export sometimes drops punctuation
+// (e.g. "DaShann Austin" vs the roster's "Da'Shann Austin"). Resolving to the
+// roster spelling keeps such a rep from splitting into two rows.
+function canon(ae: string) { return NAME2DISPLAY[norm(ae)] || ae; }
 function isFormer(ae: string) { return norm(ae) in FORMER_TEAM; }
 function chanFor(ae: string): Channel | "" { const t = teamFor(ae); return t ? TEAM2CH[t] : ""; }
 // An AE belongs on a given channel's board if their team is that channel.
 // Former AEs are a wholesale-only concept (their wholesale funded loans still
 // count toward the $100M goal).
+// True once an AE's scheduled-removal date has arrived (America/Phoenix).
+function retired(ae: string): boolean {
+  const d = RETIRE[norm(ae)];
+  if (!d) return false;
+  const [y, m, day] = d.split("-").map(Number);
+  const az = azNow();
+  const ty = az.getFullYear(), tm = az.getMonth() + 1, td = az.getDate();
+  if (ty !== y) return ty > y;
+  if (tm !== m) return tm > m;
+  return td >= day;
+}
 function counts(ae: string, channel: Channel) {
+  if (retired(ae)) return false;
   if (chanFor(ae) === channel) return true;
   if (channel === "wholesale" && isFormer(ae)) return true;
   return false;
@@ -67,6 +92,7 @@ export type BoardData = {
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
   tix: Record<string, number>;
+  tixTotal: number;
   callsPending: boolean;
   tixPending: boolean;
   kpi: {
@@ -116,7 +142,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   let pipeAll = 0, pipeLocked = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
 
   for (const r of rd) {
-    const name = (r["Lender Account Executive Name"] || "").trim();
+    const name = canon((r["Lender Account Executive Name"] || "").trim());
     if (!name || !(r["Loan Number"] || "").trim()) continue;
     const wh = counts(name, channel);
     const st = (r["Loan Status"] || "").trim().toLowerCase();
@@ -155,6 +181,13 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     }
   }
 
+  // Seed every rostered AE on this channel so brand-new reps (e.g. a new team)
+  // show on the board — with their calls, tickets, and subs — even before they
+  // have any funded production. (Runs before the calls/tickets fill below.)
+  for (const [, d] of Object.entries(TEAMS)) {
+    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm)) A(nm);
+  }
+
   // Call activity → outbound calls + talk minutes per board AE.
   if (callsCsv) {
     const parsed = Papa.parse<Record<string, string>>(callsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() });
@@ -173,6 +206,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   // file resets each day, so tallying every row in the newest file gives the
   // running same-day count (grows through the day, back to 0 the next day).
   const tix: Record<string, number> = {};
+  let tixTotal = 0;
   if (ticketsCsv) {
     const parsed = Papa.parse<Record<string, string>>(ticketsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() });
     const byNorm: Record<string, number> = {};
@@ -184,15 +218,20 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       const c = byNorm[norm(name)];
       if (c) tix[name] = c;
     }
+    // Team-wide total: every ticket logged today by a rep on this channel
+    // (excludes non-roster/system names like "Win Team").
+    for (const nm in byNorm) {
+      if (retired(nm)) continue;
+      const t = NAME2TEAM[nm];
+      if ((t && TEAM2CH[t] === channel) || (channel === "wholesale" && nm in FORMER_TEAM)) tixTotal += byNorm[nm];
+    }
   }
 
-  // Board rows. Wholesale lists AEs who funded in the month. Retail &
-  // correspondent also list AEs who have pipeline or CTC production but haven't
-  // funded yet (smaller desks — show the active book, not just funders).
-  const showActive = channel !== "wholesale";
+  // Board rows: every active rostered AE on this channel (seeded above) shows,
+  // even with zero production. Former AEs appear only the month they funded.
   const rows: BoardData["rows"] = [];
   for (const [name, a] of Object.entries(ae)) {
-    if (a.units === 0 && !(showActive && (a.pipe > 0 || a.ctc > 0))) continue;
+    if (isFormer(name) && a.units === 0) continue;
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
@@ -206,6 +245,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     today,
     mtd,
     tix,
+    tixTotal,
     callsPending: !callsIsToday,
     tixPending: !(ticketsCsv && tixIsToday),
     kpi: {
