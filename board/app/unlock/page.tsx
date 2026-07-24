@@ -60,7 +60,7 @@ export default function Unlock() {
           autoFocus
           placeholder="••••"
           style={{
-            width: "100%", textAlign: "center", fontSize: "24px", letterSpacing: "6px",
+            width: "100%", boxSizing: "border-box", textAlign: "center", fontSize: "24px", letterSpacing: "6px",
             fontWeight: 700, padding: "12px", borderRadius: "10px",
             border: "1px solid " + (err ? "#e34948" : "#cdd4de"), outline: "none",
             color: "#17233d", background: "#f7f9fc",
@@ -72,7 +72,7 @@ export default function Unlock() {
           </div>
         )}
         <button type="submit" disabled={busy || !pin} style={{
-          marginTop: "16px", width: "100%", padding: "12px", borderRadius: "10px", border: "none",
+          marginTop: "16px", width: "100%", boxSizing: "border-box", padding: "12px", borderRadius: "10px", border: "none",
           background: busy || !pin ? "#9fb0c4" : "#1a9e4e", color: "#fff", fontSize: "15px",
           fontWeight: 800, cursor: busy || !pin ? "default" : "pointer",
         }}>
