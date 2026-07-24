@@ -66,7 +66,9 @@ export type BoardData = {
   rows: [string, string, number, number, number, number, number, number, number][];
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
+  tix: Record<string, number>;
   callsPending: boolean;
+  tixPending: boolean;
   kpi: {
     pipeline: number; pipeLocked: number; pipeUnlocked: number; lockedPct: number;
     funded: number; fundedUnits: number; goalElig: number;
@@ -90,7 +92,7 @@ function extractProd(csv: string): Record<string, string>[] {
   return parsed.data;
 }
 
-export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale"): BoardData {
+export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale", ticketsCsv: string | null = null, tixIsToday: boolean = false): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = azNow();
@@ -167,6 +169,23 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     }
   }
 
+  // Tickets → count of tickets per board AE (one row per ticket). The tickets
+  // file resets each day, so tallying every row in the newest file gives the
+  // running same-day count (grows through the day, back to 0 the next day).
+  const tix: Record<string, number> = {};
+  if (ticketsCsv) {
+    const parsed = Papa.parse<Record<string, string>>(ticketsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() });
+    const byNorm: Record<string, number> = {};
+    for (const r of parsed.data) {
+      const u = norm(r["User Name"] || "");
+      if (u) byNorm[u] = (byNorm[u] || 0) + 1;
+    }
+    for (const name of Object.keys(ae)) {
+      const c = byNorm[norm(name)];
+      if (c) tix[name] = c;
+    }
+  }
+
   // Board rows. Wholesale lists AEs who funded in the month. Retail &
   // correspondent also list AEs who have pipeline or CTC production but haven't
   // funded yet (smaller desks — show the active book, not just funders).
@@ -186,7 +205,9 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     rows,
     today,
     mtd,
+    tix,
     callsPending: !callsIsToday,
+    tixPending: !(ticketsCsv && tixIsToday),
     kpi: {
       pipeline: pipeAll, pipeLocked, pipeUnlocked, lockedPct: pipeAll ? pipeLocked / pipeAll * 100 : 0,
       funded: fundAll, fundedUnits: fundUnits, goalElig: eligAll,

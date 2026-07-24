@@ -3,6 +3,7 @@ import { computeBoard, BOARDS, type BoardData, type Channel } from "./board";
 
 const POWERBI = process.env.POWERBI_FOLDER_ID || "1kNFwyV5Jn-JNtlKdXph2KoWFwwX_A5yk";
 const CALLS = process.env.CALL_REPORTS_FOLDER_ID || "16al-d-n0hlYV_X84pj74ChMR-b-b5nYJ";
+const TICKETS = process.env.TICKETS_FOLDER_ID || "1BUT5Qxv4LNX-tGSJ5JTgfYB-baQbKep2";
 
 function hasCreds() { return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY); }
 function client() {
@@ -50,7 +51,7 @@ function azTodayStr(): string {
 function emptyBoard(channel: Channel): BoardData {
   const cfg = BOARDS[channel];
   return {
-    rows: [], today: {}, mtd: {}, callsPending: true,
+    rows: [], today: {}, mtd: {}, tix: {}, callsPending: true, tixPending: true,
     kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0 },
     updatedLabel: "—",
     callsUpdatedLabel: "—",
@@ -62,7 +63,7 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
   const EMPTY = emptyBoard(channel);
   if (!hasCreds()) return { ...EMPTY, error: "no-credentials" };
   try {
-    const [prodFiles, callFiles] = await Promise.all([listCsvs(POWERBI), listCsvs(CALLS)]);
+    const [prodFiles, callFiles, ticketFiles] = await Promise.all([listCsvs(POWERBI), listCsvs(CALLS), listCsvs(TICKETS)]);
     // Newest production CSV that actually contains the Sales Board header.
     let prodCsv = "", prodFile: DFile | null = null;
     for (const f of prodFiles) {
@@ -82,7 +83,19 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
     }
     const callsLabel = callFile ? azTimeLabel(callFile.modifiedTime) : "—";
 
-    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel);
+    // Newest tickets CSV that actually parses as text (skips the occasional
+    // image accidentally saved with a .csv name). Header has "User Name".
+    let ticketsCsv: string | null = null, tixIsToday = false;
+    for (const f of ticketFiles) {
+      const text = await download(f.id);
+      if (text.includes("User Name")) {
+        ticketsCsv = text;
+        tixIsToday = azDateStr(f.modifiedTime) === azTodayStr();
+        break;
+      }
+    }
+
+    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel, ticketsCsv, tixIsToday);
   } catch (e: any) {
     return { ...EMPTY, error: e?.message || String(e) };
   }

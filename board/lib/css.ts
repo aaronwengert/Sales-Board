@@ -31,8 +31,15 @@ export const CSS = `
   .cl-days .dl-meta{min-width:0}
   .cl-days .dl-t{font-size:14px;font-weight:800;color:var(--ink);line-height:1.05}
   .cl-days .dl-sub{font-size:10.5px;font-weight:600;color:var(--muted);margin-top:3px}
-  .dl-resc{display:inline-flex;align-items:center;margin-top:6px;font-size:11px;font-weight:800;
-    color:var(--amber-ink);background:var(--amber-soft);border-radius:7px;padding:2px 8px;letter-spacing:.2px}
+  .deadlines{margin-top:7px;font-size:11.5px;font-weight:700;color:var(--ink2);line-height:1.4}
+  .dl-head{color:var(--muted);font-weight:800}
+  .dl-lbl{color:var(--muted);font-weight:800;font-size:10px;letter-spacing:.3px}
+  .dl-cd{color:var(--b);font-weight:800}
+  .dl-resc{color:var(--amber-ink);font-weight:800}
+  .dl-cd.dl-today{color:#fff;background:#2a5bbf;padding:1px 8px;border-radius:7px;
+    box-shadow:0 0 0 2px rgba(42,91,191,.25),0 0 7px rgba(42,91,191,.40)}
+  .dl-resc.dl-today{color:#fff;background:#c2740e;padding:1px 8px;border-radius:7px;
+    box-shadow:0 0 0 2px rgba(224,138,23,.30),0 0 7px rgba(224,138,23,.45)}
   .kt-today{width:376px}.kt-pipe{width:336px}.kt-funded{width:340px}.kt-ondeck{width:372px}
   .combo .split{display:flex;margin-top:8px}
   .combo .half{flex:1}
@@ -86,7 +93,8 @@ export const CSS = `
   .grouphdr.gh2{background:#1a9e4e;color:#fff}
   .grouphdr.gh3{background:#e08a17;color:#fff}
   .tsub{font-weight:800;font-size:12px;color:#33415c}
-  .tsub.hit{color:#127a3c}
+  .tsub.hit{color:#127a3c;background:var(--green-soft);border-radius:9px;padding:1px 7px;
+    box-shadow:0 0 0 1px rgba(26,158,78,.30),0 0 7px rgba(26,158,78,.30)}
   .pend{font-weight:700;font-size:12px;color:#c2c9d4}
   .chk{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;
     background:var(--green);color:#fff;font-size:12px;font-weight:900;line-height:1}
@@ -171,6 +179,5 @@ export const CSS = `
   .mroot .chip{font-size:10.5px;color:#5c6a7a;background:#f2f5f9;border-radius:20px;padding:3px 9px;font-weight:600}
   .mroot .chip .hit{color:var(--green-ink)}
   .mroot .banner{background:#fff7e6;border:1px solid #f0dca6;color:#8a6d1e;border-radius:12px;padding:14px 16px;font-size:14px;margin-top:8px}
-  .mroot .mresc{display:inline-flex;align-items:center;margin-top:9px;font-size:11.5px;font-weight:800;
-    color:var(--amber-ink);background:var(--amber-soft);border-radius:8px;padding:3px 10px}
+  .mroot .mdl{margin-top:9px;font-size:12px;font-weight:700;color:var(--ink2);line-height:1.4}
 `;

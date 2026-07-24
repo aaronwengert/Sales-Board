@@ -4,12 +4,22 @@ export const CLIENT = `
   var D = (B.rows||[]).slice();
   var TODAY = B.today||{}, MTD_SUBS = B.mtd||{}, K = B.kpi||{};
   var CALLS_PENDING = !!B.callsPending;
-  var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, GOAL=B.goal||100e6;
+  var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, TIX_GOAL=3, GOAL=B.goal||100e6;
   var GOAL_LBL='$'+Math.round(GOAL/1e6)+'M';
   var BROKERS_PENDING=true, YTD_BROKERS={};
-  var TIX_PENDING=true, TIX_TODAY={};   // daily Tix per AE — feed not wired yet
-  // Rescission deadline per reporting month, keyed "YYYY-MM" (edit as dates arrive).
-  var RESCISSION={ /* '2026-07':'Jul 28' */ };
+  var TIX_TODAY = B.tix || {};                    // daily ticket count per AE (from tickets feed)
+  var TIX_PENDING = B.tixPending===false ? false : true;
+  // Daily goal is met by: 1+ sub, 3+ tix, 75+ calls, or 90+ min talk.
+  // Per reporting month deadlines, keyed "YYYY-MM"; dates as 'YYYY-MM-DD'.
+  // CD Deadline comes before Rescission; each drops off once its date passes (AZ).
+  var DEADLINES={
+    '2026-07': { cd:'2026-07-23', resc:'2026-07-27' },
+    '2026-08': { cd:'2026-08-22', resc:'2026-08-26' },
+    '2026-09': { cd:'2026-09-22', resc:'2026-09-25' },
+    '2026-10': { cd:'2026-10-23', resc:'2026-10-27' },
+    '2026-11': { cd:'2026-11-20', resc:'2026-11-24' },
+    '2026-12': { cd:'2026-12-22', resc:'2026-12-26' }
+  };
   function $(id){return document.getElementById(id);}
   function mM(v){ if(!v) return '$0'; return '$'+(v/1e6).toFixed(2)+'M'; }
   function mK(v){ if(!v) return '$0'; return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : '$'+Math.round(v/1000)+'K'; }
@@ -66,13 +76,13 @@ export const CLIENT = `
       : '<span class="frow"><span class="mval">'+mM(f)+'</span><span class="g5bar"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="g5pct">'+fp+'%</span></span>';
     var pk = pipe>=15e6?' pk pk-best':pipe>=10e6?' pk pk-good':pipe>=7.5e6?' pk pk-decent':'';
     var td=TODAY[n]||[0,0,0];
-    var calls=td[0], talk=td[1], sub=td[2];
+    var calls=td[0], talk=td[1], sub=td[2], tixN=TIX_TODAY[n]||0;
     subsToday+=sub;
-    var cHit=!CALLS_PENDING&&calls>=CALLS_GOAL, tHit=!CALLS_PENDING&&talk>=TALK_GOAL, sHit=sub>=SUB_GOAL;
-    var met=cHit||tHit||sHit; if(met) metCount++;
+    var cHit=!CALLS_PENDING&&calls>=CALLS_GOAL, tHit=!CALLS_PENDING&&talk>=TALK_GOAL, sHit=sub>=SUB_GOAL, xHit=!TIX_PENDING&&tixN>=TIX_GOAL;
+    var met=cHit||tHit||sHit||xHit; if(met) metCount++;
     var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
     var talkTxt =CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
-    var tixTxt  =TIX_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub">'+(TIX_TODAY[n]||0)+'</span>';
+    var tixTxt  =TIX_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(xHit?' hit':'')+'">'+tixN+'</span>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
      +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
      +'<td>'+callsTxt+'</td>'
@@ -97,7 +107,7 @@ export const CLIENT = `
   var pct=Math.round(metCount/denom*100);
   $('goalpct').textContent=pct+'%';
   $('goalbar').style.width=pct+'%';
-  $('goalsub').innerHTML=metCount+' of '+D.length+' hit &mdash; sub, '+CALLS_GOAL+'+ calls, or '+TALK_GOAL+'+ min talk'+(CALLS_PENDING?' <span style="color:var(--amber-ink)">&middot; calls pending</span>':'');
+  $('goalsub').innerHTML=metCount+' of '+D.length+' hit &mdash; a sub, '+(TIX_PENDING?'':(TIX_GOAL+'+ tix, '))+CALLS_GOAL+'+ calls, or '+TALK_GOAL+'+ min talk'+(CALLS_PENDING?' <span style="color:var(--amber-ink)">&middot; calls pending</span>':'');
   $('subpill').textContent=subsToday+' sub'+(subsToday===1?'':'s')+' today';
   var mtdTotal=D.reduce(function(a,r){return a+(MTD_SUBS[r[0]]||0);},0);
   $('mtdpill').textContent=mtdTotal+' MTD subs';
@@ -117,7 +127,16 @@ export const CLIENT = `
   $('fdleft').textContent=remaining;
   $('fdsub').textContent='of '+total+' in '+MONTHS[m];
   var ymKey=y+'-'+String(m+1).padStart(2,'0');
-  if(RESCISSION[ymKey]){ if($('rescdate'))$('rescdate').textContent=RESCISSION[ymKey]; if($('rescwrap'))$('rescwrap').style.display=''; }
+  function fmtDL(s){ var p=s.split('-'); return MONTHS[+p[1]-1].slice(0,3)+' '+(+p[2]); }
+  function dlLive(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]) >= today; } // today or later
+  var _dl=DEADLINES[ymKey]||{};
+  function dlToday(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime()===today.getTime(); }
+  function dlBadge(lbl,cls,s){ var t=dlToday(s); return '<span class="dl-lbl">'+lbl+'</span> <span class="'+cls+(t?' dl-today':'')+'">'+(t?'Today':fmtDL(s))+'</span>'; }
+  var dlParts=[];
+  if(_dl.cd   && dlLive(_dl.cd))   dlParts.push(dlBadge('CD','dl-cd',_dl.cd));
+  if(_dl.resc && dlLive(_dl.resc)) dlParts.push(dlBadge('Rescission','dl-resc',_dl.resc));
+  var dlLine = dlParts.length ? '<span class="dl-head">Deadlines:</span> '+dlParts.join('&nbsp;&nbsp;') : '';
+  if(dlLine && $('deadlines')){ $('deadlines').innerHTML=dlLine; $('deadlines').style.display=''; }
   $('pacefill').style.width=Math.min(100,fundedPct).toFixed(1)+'%';
   $('pacemk').style.left=pacePct.toFixed(1)+'%';
   $('fundnote').innerHTML=mM(K.goalElig||0)+' goal-eligible &middot; '+fundedPct.toFixed(1)+'% of '+GOAL_LBL+' &middot; pace ~$'+(paceTarget/1e6).toFixed(2)+'M (funding day '+elapsed+' of '+total+')';
@@ -134,11 +153,11 @@ export const CLIENT = `
       return;
     }
     var lp2 = Math.round(K.lockedPct||0);
-    var rescM = RESCISSION[ymKey] ? '<div class="mresc">Rescission deadline &middot; '+RESCISSION[ymKey]+'</div>' : '';
+    var dlM = dlLine ? '<div class="mdl">'+dlLine+'</div>' : '';
     var hdr = '<div class="mhdr"><div class="t1">'+(B.title||'Sales Production')+'</div>'
       +'<div class="t2">'+MONTHS[m]+' '+y+'</div>'
       +'<div class="mdays"><span class="n tnum">'+remaining+'</span><div><div class="dt">funding days left</div>'
-      +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div>'+rescM+'</div>';
+      +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div>'+dlM+'</div>';
     var tiles = '<div class="kpi">'
       +'<div class="tile tv"><div class="lab">TODAY&rsquo;S GOAL</div><div class="big tnum">'+pct+'%</div><div class="pbar"><i style="width:'+pct+'%"></i></div><div class="sub">'+metCount+' of '+D.length+' hit'+(CALLS_PENDING?' &middot; calls pending':'')+'</div></div>'
       +'<div class="tile tp"><div class="lab">PIPELINE</div><div class="big tnum">'+mM(K.pipeline||0)+'</div><div class="sub">'+mM(K.pipeLocked||0)+' locked &middot; '+lp2+'%<br>'+mtdTotal+' MTD subs</div></div>'
@@ -150,8 +169,8 @@ export const CLIENT = `
       var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
       var fp=Math.min(100,Math.round(f/3e6*100));
       var td=TODAY[n]||[0,0,0];
-      var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL;
-      var met=cHit||tHit||sHit;
+      var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL, xHit=!TIX_PENDING&&(TIX_TODAY[n]||0)>=TIX_GOAL;
+      var met=cHit||tHit||sHit||xHit;
       cards+='<div class="mc"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
         +'<div class="mc-nm"><div class="nm">'+n+'</div><div class="tm">'+tm+'</div></div>'
         +'<div class="mc-tot"><div class="tl">TOTAL</div><div class="tv">'+mM(tot)+'</div></div></div>'
@@ -161,7 +180,7 @@ export const CLIENT = `
         +'<div class="st sa"><div class="k">CTC+</div><div class="v">'+mM(ctc)+'</div><div class="u">'+ctcU+' unit'+(ctcU===1?'':'s')+'</div></div>'
         +'</div>'
         +'<div class="mc-f"><span class="chip">MTD subs &middot; '+(MTD_SUBS[n]||0)+'</span>'
-        +'<span class="chip">Tix &middot; '+(TIX_PENDING?'&ndash;':(TIX_TODAY[n]||0))+'</span>'
+        +'<span class="chip">Tix &middot; '+(TIX_PENDING?'&ndash;':(xHit?'<b class="hit">'+(TIX_TODAY[n]||0)+'</b>':(TIX_TODAY[n]||0)))+'</span>'
         +'<span class="chip">'+(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today')+'</span>'
         +'<span class="chip">Avg '+mK(avg)+'</span></div></div>';
     });
