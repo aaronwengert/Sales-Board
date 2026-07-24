@@ -20,7 +20,7 @@ export const SHELL = `
       </div>
     </div>
     <div class="card k-violet kt-today">
-      <div class="krow"><span class="klabel">TODAY&rsquo;S GOAL</span><span class="pill subs" id="subpill">—</span></div>
+      <div class="krow"><span class="klabel">TODAY&rsquo;S GOAL</span><span class="pillwrap"><span class="pill subs" id="subpill">—</span><span class="pill subs" id="tixpill" style="display:none">—</span></span></div>
       <div class="big tnum" id="goalpct">—</div>
       <div class="pacebar"><i id="goalbar" style="width:0%;background:#6b4fbb"></i></div>
       <div class="pnote" id="goalsub">—</div>

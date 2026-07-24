@@ -68,6 +68,7 @@ export const CSS = `
   .pill.behind{background:var(--amber-soft);color:var(--amber-ink)}
   .pill.ahead{background:var(--green-soft);color:var(--green-ink)}
   .pill.subs{background:#efeafc;color:#5b3ea8}
+  .pillwrap{display:inline-flex;gap:6px;align-items:center}
   .pill.mtd{background:#eaf1fb;color:#2a5bbf}
   .psplit{display:flex;margin-top:8px}
   .psplit .h{flex:1}

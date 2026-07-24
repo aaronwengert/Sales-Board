@@ -58,7 +58,7 @@ export const CLIENT = `
    +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:158px"><col style="width:106px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:148px"><col style="width:148px"></colgroup>';
-  var metCount=0, subsToday=0;
+  var metCount=0, subsToday=0, tixToday=0;
   h+='<tr><th class="l"></th>'+sp
    +'<th class="grouphdr gh0" colspan="5">TODAY</th>'+sp
    +'<th class="grouphdr gh1" colspan="3">ACTIVITY &amp; PIPELINE</th>'+sp
@@ -77,7 +77,7 @@ export const CLIENT = `
     var pk = pipe>=15e6?' pk pk-best':pipe>=10e6?' pk pk-good':pipe>=7.5e6?' pk pk-decent':'';
     var td=TODAY[n]||[0,0,0];
     var calls=td[0], talk=td[1], sub=td[2], tixN=TIX_TODAY[n]||0;
-    subsToday+=sub;
+    subsToday+=sub; tixToday+=tixN;
     var cHit=!CALLS_PENDING&&calls>=CALLS_GOAL, tHit=!CALLS_PENDING&&talk>=TALK_GOAL, sHit=sub>=SUB_GOAL, xHit=!TIX_PENDING&&tixN>=TIX_GOAL;
     var met=cHit||tHit||sHit||xHit; if(met) metCount++;
     var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
@@ -109,6 +109,7 @@ export const CLIENT = `
   $('goalbar').style.width=pct+'%';
   $('goalsub').innerHTML=metCount+' of '+D.length+' hit &mdash; a sub, '+(TIX_PENDING?'':(TIX_GOAL+'+ tix, '))+CALLS_GOAL+'+ calls, or '+TALK_GOAL+'+ min talk'+(CALLS_PENDING?' <span style="color:var(--amber-ink)">&middot; calls pending</span>':'');
   $('subpill').textContent=subsToday+' sub'+(subsToday===1?'':'s')+' today';
+  if($('tixpill')){ if(TIX_PENDING){ $('tixpill').style.display='none'; } else { $('tixpill').style.display=''; $('tixpill').textContent=tixToday+' tix today'; } }
   var mtdTotal=D.reduce(function(a,r){return a+(MTD_SUBS[r[0]]||0);},0);
   $('mtdpill').textContent=mtdTotal+' MTD subs';
 
