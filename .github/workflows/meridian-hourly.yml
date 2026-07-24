@@ -2,12 +2,13 @@ name: MeridianLink hourly export
 
 on:
   schedule:
-    # Fires at the top of every hour (cron is always UTC). The business_hours
-    # guard inside the script — evaluated in Arizona time via the TZ below —
-    # makes off-hours runs exit immediately, so it effectively only emails
-    # during the window you set in config.json (default Mon-Fri 6am-6pm MST).
     - cron: "17 * * * *"
-  workflow_dispatch: {}   # adds a "Run workflow" button in the Actions tab for on-demand tests
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Bypass the business-hours check and run now"
+        type: boolean
+        default: false
 
 jobs:
   export:
@@ -22,6 +23,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      # Manual "Run workflow" clicks pass --force so you can test any time of day.
-      # Scheduled runs omit it, so the business-hours guard applies.
-      - run: python meridian_report_bot.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+      - run: python meridian_report_bot.py ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
