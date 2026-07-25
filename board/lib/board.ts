@@ -19,7 +19,7 @@ const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
   "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","Jeff Laux","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua"] },
   "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Jeremy Rohrer","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby"] },
   "CTC Crusaders": { channel: "wholesale", aes: ["Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
-  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Alfredo Sanchez","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith"] },
+  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
   "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins","Darin Judis","Dianne Minor","Todd Lautzenheiser"] },
@@ -41,15 +41,20 @@ const CTC = new Set(["clear to close","docs out","docs back","docs ordered"]);
 const FUND = new Set(["funded","loan shipped","in purchase review","in final purchase review","ready for sale"]);
 
 function norm(s: string) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); }
+// Identity aliases: fold two spellings of the same person onto one canonical
+// key so their production, calls, and tickets combine on a single row.
+const ALIAS: Record<string, string> = { "alfredo sanchez": "alfredo sanchez ii" };
+function nkey(s: string) { const n = norm(s); return ALIAS[n] || n; }
 const NAME2TEAM: Record<string, string> = {};
 const NAME2DISPLAY: Record<string, string> = {};
 const TEAM2CH: Record<string, Channel> = {};
 for (const [t, d] of Object.entries(TEAMS)) { TEAM2CH[t] = d.channel; for (const a of d.aes) { NAME2TEAM[norm(a)] = t; NAME2DISPLAY[norm(a)] = a; } }
 function teamFor(ae: string) { return NAME2TEAM[norm(ae)] || ""; }
 // Canonical display spelling: the production export sometimes drops punctuation
-// (e.g. "DaShann Austin" vs the roster's "Da'Shann Austin"). Resolving to the
-// roster spelling keeps such a rep from splitting into two rows.
-function canon(ae: string) { return NAME2DISPLAY[norm(ae)] || ae; }
+// (e.g. "DaShann Austin" vs the roster's "Da'Shann Austin") or uses a name
+// variant (e.g. "Alfredo Sanchez" vs "Alfredo Sanchez II"). Resolving through
+// nkey() to the roster spelling keeps such a rep from splitting into two rows.
+function canon(ae: string) { return NAME2DISPLAY[nkey(ae)] || ae; }
 function isFormer(ae: string) { return norm(ae) in FORMER_TEAM; }
 function chanFor(ae: string): Channel | "" { const t = teamFor(ae); return t ? TEAM2CH[t] : ""; }
 // An AE belongs on a given channel's board if their team is that channel.
@@ -193,11 +198,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const parsed = Papa.parse<Record<string, string>>(callsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() });
     const byNorm: Record<string, [number, number]> = {};
     for (const r of parsed.data) {
-      const n = norm(r["User"] || "");
+      const n = nkey(r["User"] || "");
       byNorm[n] = [parseInt(r["Outbound Calls"] || "0", 10) || 0, toMin(r["Outbound Call Duration"])];
     }
     for (const name of Object.keys(ae)) {
-      const c = byNorm[norm(name)];
+      const c = byNorm[nkey(name)];
       if (c) { today[name] = today[name] || [0, 0, 0]; today[name][0] = c[0]; today[name][1] = Math.round(c[1]); }
     }
   }
@@ -211,11 +216,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const parsed = Papa.parse<Record<string, string>>(ticketsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() });
     const byNorm: Record<string, number> = {};
     for (const r of parsed.data) {
-      const u = norm(r["User Name"] || "");
+      const u = nkey(r["User Name"] || "");
       if (u) byNorm[u] = (byNorm[u] || 0) + 1;
     }
     for (const name of Object.keys(ae)) {
-      const c = byNorm[norm(name)];
+      const c = byNorm[nkey(name)];
       if (c) tix[name] = c;
     }
     // Team-wide total: every ticket logged today by a rep on this channel
