@@ -54,7 +54,7 @@ export const CLIENT = `
   var lp = Math.round(K.lockedPct||0);
   $('lockv').innerHTML = mM(K.pipeLocked||0)+' <span>&middot; '+lp+'%</span>';
   $('unlockv').innerHTML = mM(K.pipeUnlocked||0)+' <span>&middot; '+(100-lp)+'%</span>';
-  if($('pipenote')){ $('pipenote').style.display=''; $('pipenote').innerHTML=pipePct+'% of $300M pipeline goal'+(K.pipeSoft?' &middot; soft = open/registered/processing &le;30 days':''); }
+  if($('pipenote')){ $('pipenote').style.display=''; $('pipenote').innerHTML=pipePct+'% of $300M pipeline goal'+(K.pipeSoft?' &middot; soft = open/registered &le;30 days':''); }
   $('fundbig').innerHTML = mM(K.funded||0)+' <span>&middot; '+(K.fundedUnits||0)+'</span>';
   $('ctcv').innerHTML = mM(K.ctc||0)+' <span>&middot; '+(K.ctcUnits||0)+'</span>';
   $('fctcv').textContent = mM(K.fundedCtc||0);
