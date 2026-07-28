@@ -114,7 +114,7 @@ function azDateOf(iso: string): { m: number; d: number; y: number } {
 }
 
 export type BoardData = {
-  rows: [string, string, number, number, number, number, number, number, number, number, number][];
+  rows: [string, string, number, number, number, number, number, number, number, number, number, number][];
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
   tix: Record<string, number>;
@@ -161,11 +161,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   }
   const [ly, lm] = latestKey ? latestKey.split("-").map(Number) : [todayY, todayM];
 
-  type Agg = { pipe: number; pipeUn: number; stale: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
+  type Agg = { pipe: number; pipeUn: number; soft: number; stale: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
-  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, stale: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, soft: 0, stale: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
   // 30-day cutoff for the soft-pipeline gate (rolling, Arizona).
@@ -207,7 +207,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       if (inPipe) {
         a.pipe += amt; pipeAll += amt;
         if (locked) pipeLocked += amt; else a.pipeUn += amt;
-        if (soft) pipeSoft += amt;
+        if (soft) { pipeSoft += amt; a.soft += amt; }
         // Stale: approved/doc-check loans that haven't moved in 60+ days.
         if (channel === "wholesale" && STALE_PIPE.has(st) && sdKey > 0 && sdKey <= staleCutKey) {
           a.stale += amt; pipeStale += amt; pipeStaleN += 1;
@@ -285,7 +285,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
-    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.stale]);
+    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.stale, a.soft]);
   }
   rows.sort((x, y) => y[7] - x[7]);
 

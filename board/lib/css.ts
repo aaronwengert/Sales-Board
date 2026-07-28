@@ -72,6 +72,7 @@ export const CSS = `
   .pill.mtd{background:#eaf1fb;color:#2a5bbf}
   .softadd{font-size:17px;color:#8b95a6;font-weight:800;letter-spacing:0}
   .mval.stale-amt{color:#a06a12}
+  .mval.soft-amt{color:#7d8aa0}
   .psplit{display:flex;margin-top:8px}
   .psplit .h{flex:1}
   .psplit .h+.h{border-left:1px solid #eef1f6;padding-left:12px}
