@@ -103,7 +103,8 @@ export function buildReport(prodCsv: string, dayFiles: DayFiles[], channel: Chan
       const rows = Papa.parse<Record<string, string>>(df.callsCsv.trim(), { header: true, skipEmptyLines: true, transformHeader: (h) => h.trim() }).data;
       for (const r of rows) {
         const k = nkey(r["User"] || "");
-        if (k) dayCalls[k] = [parseInt(r["Outbound Calls"] || "0", 10) || 0, toMin(r["Outbound Call Duration"])];
+        // Talk minutes = inbound + outbound, matching the live board.
+        if (k) dayCalls[k] = [parseInt(r["Outbound Calls"] || "0", 10) || 0, toMin(r["Outbound Call Duration"]) + toMin(r["Inbound Call Duration"])];
       }
     } else missCalls.push(date);
     if (df?.ticketsCsv) {

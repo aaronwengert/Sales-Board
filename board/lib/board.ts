@@ -244,7 +244,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const byNorm: Record<string, [number, number]> = {};
     for (const r of parsed.data) {
       const n = nkey(r["User"] || "");
-      byNorm[n] = [parseInt(r["Outbound Calls"] || "0", 10) || 0, toMin(r["Outbound Call Duration"])];
+      // Talk minutes = inbound + outbound (intra-PBX/internal excluded).
+      byNorm[n] = [parseInt(r["Outbound Calls"] || "0", 10) || 0, toMin(r["Outbound Call Duration"]) + toMin(r["Inbound Call Duration"])];
     }
     for (const name of Object.keys(ae)) {
       const c = byNorm[nkey(name)];
