@@ -10,6 +10,12 @@ export const CLIENT = `
   var TIX_TODAY = B.tix || {};                    // daily ticket count per AE (from tickets feed)
   var TIX_TOTAL = B.tixTotal||0;                  // team-wide total tickets today (this channel)
   var TIX_PENDING = B.tixPending===false ? false : true;
+  // Daily-goal exemptions: DASH rows show dashes in the TODAY group and are
+  // excluded from the goal %; EXEMPT rows keep live TODAY data but are also
+  // excluded from the goal % (numerator and denominator).
+  var DASH={}, EXEMPT={};
+  (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
+  (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Daily goal is met by: 1+ sub, 3+ tix, 75+ calls, or 90+ min talk.
   // Per reporting month deadlines, keyed "YYYY-MM"; dates as 'YYYY-MM-DD'.
   // CD Deadline comes before Rescission; each drops off once its date passes (AZ).
@@ -39,10 +45,16 @@ export const CLIENT = `
   }
 
   // ---- KPI tiles ----
-  $('pipebig').textContent = mM(K.pipeline||0);
+  // Option D: big number is the hard (actual) pipeline; soft rides alongside.
+  var PIPE_GOAL = 300e6;
+  var pipeActual = (K.pipeline||0) - (K.pipeSoft||0);
+  $('pipebig').innerHTML = mM(pipeActual) + (K.pipeSoft ? ' <span class="softadd">+ '+mM(K.pipeSoft)+' soft</span>' : '');
+  if($('pipebar')) $('pipebar').style.width = Math.min(100, pipeActual/PIPE_GOAL*100).toFixed(1)+'%';
+  var pipePct = (pipeActual/PIPE_GOAL*100).toFixed(1);
   var lp = Math.round(K.lockedPct||0);
   $('lockv').innerHTML = mM(K.pipeLocked||0)+' <span>&middot; '+lp+'%</span>';
   $('unlockv').innerHTML = mM(K.pipeUnlocked||0)+' <span>&middot; '+(100-lp)+'%</span>';
+  if($('pipenote')){ $('pipenote').style.display=''; $('pipenote').innerHTML=pipePct+'% of $300M pipeline goal'+(K.pipeSoft?' &middot; soft = open/registered/processing &le;30 days':''); }
   $('fundbig').innerHTML = mM(K.funded||0)+' <span>&middot; '+(K.fundedUnits||0)+'</span>';
   $('ctcv').innerHTML = mM(K.ctc||0)+' <span>&middot; '+(K.ctcUnits||0)+'</span>';
   $('fctcv').textContent = mM(K.fundedCtc||0);
@@ -56,44 +68,50 @@ export const CLIENT = `
   var h='<colgroup>'
    +'<col style="width:380px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:76px"><col style="width:72px"><col style="width:76px"><col style="width:76px"><col style="width:8px">'
-   +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:8px">'
+   +'<col style="width:112px"><col style="width:112px"><col style="width:112px"><col style="width:100px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:158px"><col style="width:106px"><col style="width:8px">'
    +'<col style="width:76px"><col style="width:148px"><col style="width:148px"></colgroup>';
-  var metCount=0, subsToday=0;
+  var metCount=0, subsToday=0, goalDenom=0;
   h+='<tr><th class="l"></th>'+sp
    +'<th class="grouphdr gh0" colspan="5">TODAY</th>'+sp
-   +'<th class="grouphdr gh1" colspan="3">ACTIVITY &amp; PIPELINE</th>'+sp
+   +'<th class="grouphdr gh1" colspan="4">ACTIVITY &amp; PIPELINE</th>'+sp
    +'<th class="grouphdr gh2" colspan="3">FUNDED PRODUCTION</th>'+sp
    +'<th class="grouphdr gh3" colspan="3">ON DECK</th></tr>';
   h+='<tr><th class="l">AE</th>'+sp
    +'<th>OUT CALLS</th><th>TALK MIN</th><th>TIX</th><th>SUBS</th><th>GOAL</th>'+sp
-   +'<th>MTD SUBS</th><th>PIPELINE</th><th>YTD BROKERS</th>'+sp
+   +'<th>MTD SUBS</th><th>PIPELINE</th><th>UNLOCKED</th><th>STALE</th>'+sp
    +'<th>UNITS</th><th>FUNDED / $3M</th><th>AVG FUNDED</th>'+sp
    +'<th>UNITS</th><th>CTC+</th><th>TOTAL</th></tr>';
   D.forEach(function(r,i){
-    var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
+    var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8],pipeUn=r[9]||0,staleAmt=r[10]||0;
     var fp=Math.min(100,Math.round(f/3e6*100));
     var fcell = f>=3e6 ? '<div class="circle">'+mM(f)+'</div>'
       : '<span class="frow"><span class="mval">'+mM(f)+'</span><span class="g5bar"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="g5pct">'+fp+'%</span></span>';
     var pk = pipe>=15e6?' pk pk-best':pipe>=10e6?' pk pk-good':pipe>=7.5e6?' pk pk-decent':'';
     var td=TODAY[n]||[0,0,0];
     var calls=td[0], talk=td[1], sub=td[2], tixN=TIX_TODAY[n]||0;
-    subsToday+=sub;
-    var cHit=!CALLS_PENDING&&calls>=CALLS_GOAL, tHit=!CALLS_PENDING&&talk>=TALK_GOAL, sHit=sub>=SUB_GOAL, xHit=!TIX_PENDING&&tixN>=TIX_GOAL;
-    var met=cHit||tHit||sHit||xHit; if(met) metCount++;
-    var callsTxt=CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
-    var talkTxt =CALLS_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
-    var tixTxt  =TIX_PENDING?'<span class="pend">&ndash;</span>':'<span class="tsub'+(xHit?' hit':'')+'">'+tixN+'</span>';
+    var isDash=!!DASH[n], isEx=!!EXEMPT[n], counted=!isDash&&!isEx;
+    if(!isDash) subsToday+=sub;
+    var cHit=!isDash&&!CALLS_PENDING&&calls>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&talk>=TALK_GOAL, sHit=!isDash&&sub>=SUB_GOAL, xHit=!isDash&&!TIX_PENDING&&tixN>=TIX_GOAL;
+    var met=cHit||tHit||sHit||xHit;
+    if(counted){ goalDenom++; if(met) metCount++; }
+    var dashTxt='<span class="pend">&ndash;</span>';
+    var callsTxt=(isDash||CALLS_PENDING)?dashTxt:'<span class="tsub'+(cHit?' hit':'')+'">'+calls+'</span>';
+    var talkTxt =(isDash||CALLS_PENDING)?dashTxt:'<span class="tsub'+(tHit?' hit':'')+'">'+Math.round(talk)+'</span>';
+    var tixTxt  =(isDash||TIX_PENDING)?dashTxt:'<span class="tsub'+(xHit?' hit':'')+'">'+tixN+'</span>';
+    var subTxt  =isDash?dashTxt:'<span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span>';
+    var goalTxt =isDash?dashTxt:(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>');
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
      +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
      +'<td>'+callsTxt+'</td>'
      +'<td>'+talkTxt+'</td>'
      +'<td>'+tixTxt+'</td>'
-     +'<td><span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span></td>'
-     +'<td>'+(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>')+'</td>'+sp
+     +'<td>'+subTxt+'</td>'
+     +'<td>'+goalTxt+'</td>'+sp
      +'<td><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
      +'<td><span class="mval'+pk+'">'+mM(pipe)+'</span></td>'
-     +'<td>'+(BROKERS_PENDING?'<span class="pend">&ndash;</span>':'<span class="mval">'+(YTD_BROKERS[n]||0)+'</span>')+'</td>'+sp
+     +'<td><span class="mval'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'
+     +'<td><span class="mval'+(staleAmt?' stale-amt':' z')+'">'+mM(staleAmt)+'</span></td>'+sp
      +'<td><span class="mval">'+u+'</span></td>'
      +'<td>'+fcell+'</td>'
      +'<td><span class="mval">'+mK(avg)+'</span></td>'+sp
@@ -104,11 +122,11 @@ export const CLIENT = `
   });
   var tbl=$('tbl'); if(tbl) tbl.innerHTML=h;
 
-  var denom=D.length||1;
+  var denom=goalDenom||1;
   var pct=Math.round(metCount/denom*100);
   $('goalpct').textContent=pct+'%';
   $('goalbar').style.width=pct+'%';
-  $('goalsub').innerHTML=metCount+' of '+D.length+' hit &mdash; a sub, '+(TIX_PENDING?'':(TIX_GOAL+'+ tix, '))+CALLS_GOAL+'+ calls, or '+TALK_GOAL+'+ min talk'+(CALLS_PENDING?' <span style="color:var(--amber-ink)">&middot; calls pending</span>':'');
+  $('goalsub').innerHTML=metCount+' of '+goalDenom+' hit &mdash; a sub, '+(TIX_PENDING?'':(TIX_GOAL+'+ tix, '))+CALLS_GOAL+'+ calls, or '+TALK_GOAL+'+ min talk'+(CALLS_PENDING?' <span style="color:var(--amber-ink)">&middot; calls pending</span>':'');
   $('subpill').textContent=subsToday+' sub'+(subsToday===1?'':'s')+' today';
   if($('tixpill')){ if(TIX_PENDING){ $('tixpill').style.display='none'; } else { $('tixpill').style.display=''; $('tixpill').textContent=TIX_TOTAL+' tix today'; } }
   var mtdTotal=D.reduce(function(a,r){return a+(MTD_SUBS[r[0]]||0);},0);
@@ -161,8 +179,8 @@ export const CLIENT = `
       +'<div class="mdays"><span class="n tnum">'+remaining+'</span><div><div class="dt">funding days left</div>'
       +'<div class="ds">of '+total+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div>'+dlM+'</div>';
     var tiles = '<div class="kpi">'
-      +'<div class="tile tv"><div class="lab">TODAY&rsquo;S GOAL</div><div class="big tnum">'+pct+'%</div><div class="pbar"><i style="width:'+pct+'%"></i></div><div class="sub">'+metCount+' of '+D.length+' hit'+(CALLS_PENDING?' &middot; calls pending':'')+'</div></div>'
-      +'<div class="tile tp"><div class="lab">PIPELINE</div><div class="big tnum">'+mM(K.pipeline||0)+'</div><div class="sub">'+mM(K.pipeLocked||0)+' locked &middot; '+lp2+'%<br>'+mtdTotal+' MTD subs</div></div>'
+      +'<div class="tile tv"><div class="lab">TODAY&rsquo;S GOAL</div><div class="big tnum">'+pct+'%</div><div class="pbar"><i style="width:'+pct+'%"></i></div><div class="sub">'+metCount+' of '+goalDenom+' hit'+(CALLS_PENDING?' &middot; calls pending':'')+'</div></div>'
+      +'<div class="tile tp"><div class="lab">PIPELINE</div><div class="big tnum">'+mM((K.pipeline||0)-(K.pipeSoft||0))+'</div><div class="sub">'+(K.pipeSoft?'+ '+mM(K.pipeSoft)+' soft &middot; ':'')+mM(K.pipeLocked||0)+' locked<br>'+mtdTotal+' MTD subs</div></div>'
       +'<div class="tile tf"><div class="lab">FUNDED</div><div class="big tnum">'+mM(K.funded||0)+' <span>&middot; '+(K.fundedUnits||0)+'</span></div><div class="pbar"><i style="width:'+Math.min(100,fundedPct).toFixed(1)+'%"></i></div><div class="sub">'+fundedPct.toFixed(1)+'% of '+GOAL_LBL+' &middot; '+(behind?'behind pace':'on pace')+'</div></div>'
       +'<div class="tile to"><div class="lab">ON DECK</div><div class="big tnum">'+mM(K.ctc||0)+' <span>&middot; '+(K.ctcUnits||0)+'</span></div><div class="odtot"><span class="odk">FUNDED &amp; CTC+</span><span class="odv">'+mM(K.fundedCtc||0)+'</span></div></div>'
       +'</div>';
@@ -171,7 +189,8 @@ export const CLIENT = `
       var n=r[0],tm=r[1],pipe=r[2],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
       var fp=Math.min(100,Math.round(f/3e6*100));
       var td=TODAY[n]||[0,0,0];
-      var cHit=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=td[2]>=SUB_GOAL, xHit=!TIX_PENDING&&(TIX_TODAY[n]||0)>=TIX_GOAL;
+      var isDash=!!DASH[n];
+      var cHit=!isDash&&!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&td[1]>=TALK_GOAL, sHit=!isDash&&td[2]>=SUB_GOAL, xHit=!isDash&&!TIX_PENDING&&(TIX_TODAY[n]||0)>=TIX_GOAL;
       var met=cHit||tHit||sHit||xHit;
       cards+='<div class="mc"><div class="mc-h"><div class="rk">'+(i+1)+'</div>'
         +'<div class="mc-nm"><div class="nm">'+n+'</div><div class="tm">'+tm+'</div></div>'
@@ -182,15 +201,15 @@ export const CLIENT = `
         +'<div class="st sa"><div class="k">CTC+</div><div class="v">'+mM(ctc)+'</div><div class="u">'+ctcU+' unit'+(ctcU===1?'':'s')+'</div></div>'
         +'</div>'
         +'<div class="mc-f"><span class="chip">MTD subs &middot; '+(MTD_SUBS[n]||0)+'</span>'
-        +'<span class="chip">Tix &middot; '+(TIX_PENDING?'&ndash;':(xHit?'<b class="hit">'+(TIX_TODAY[n]||0)+'</b>':(TIX_TODAY[n]||0)))+'</span>'
-        +'<span class="chip">'+(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today')+'</span>'
+        +'<span class="chip">Tix &middot; '+((isDash||TIX_PENDING)?'&ndash;':(xHit?'<b class="hit">'+(TIX_TODAY[n]||0)+'</b>':(TIX_TODAY[n]||0)))+'</span>'
+        +'<span class="chip">'+(isDash?'&ndash; goal n/a':(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today'))+'</span>'
         +'<span class="chip">Avg '+mK(avg)+'</span></div></div>';
     });
     mr.innerHTML = hdr + tiles + '<div class="seclabel">AE PRODUCTION &middot; '+D.length+' REPS</div>' + cards;
   })();
 
-  // ---- scale-to-fit: shrink the fixed 1836px board to any narrower screen ----
-  var BOARD_W = 1836;
+  // ---- scale-to-fit: shrink the fixed 1936px board to any narrower screen ----
+  var BOARD_W = 1936;
   function fitBoard(){
     var host = $('fithost'); var wrap = document.querySelector('.wrap');
     if(!host || !wrap || !host.clientWidth) return;   // hidden on mobile → skip

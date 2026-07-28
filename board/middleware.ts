@@ -7,7 +7,7 @@ import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 // unless BOARD_PIN is set in the environment, so a fresh deploy is never locked
 // out before the PIN is configured.
 export const config = {
-  matcher: ["/((?!api/unlock|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
+  matcher: ["/((?!api/unlock|api/report|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
 };
 
 export async function middleware(req: NextRequest) {

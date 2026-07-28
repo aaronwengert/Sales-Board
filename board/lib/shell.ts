@@ -28,10 +28,12 @@ export const SHELL = `
     <div class="card k-blue kt-pipe">
       <div class="krow"><span class="klabel">SALES TEAM PIPELINE</span><span class="pill mtd" id="mtdpill">—</span></div>
       <div class="big tnum" id="pipebig">—</div>
+      <div class="pacebar"><i id="pipebar" style="width:0%;background:#2a5bbf"></i></div>
       <div class="psplit">
         <div class="h"><div class="k">LOCKED</div><div class="v tnum" id="lockv">—</div></div>
         <div class="h"><div class="k">NOT LOCKED</div><div class="v tnum" id="unlockv">—</div></div>
       </div>
+      <div class="pnote" id="pipenote" style="display:none">—</div>
     </div>
     <div class="card k-green kt-funded">
       <div class="krow"><span class="klabel">FUNDED PRODUCTION</span><span class="pill behind" id="pacepill">—</span></div>
@@ -42,8 +44,8 @@ export const SHELL = `
     <div class="card combo k-amber kt-ondeck">
       <div class="krow"><span class="klabel">ON DECK</span></div>
       <div class="split">
-        <div class="half"><div class="k">CTC+</div><div class="v tnum" id="ctcv">—</div></div>
-        <div class="half"><div class="k">FUNDED &amp; CTC+</div><div class="v tnum" id="fctcv">—</div></div>
+        <div class="half"><div class="v tnum big-align" id="ctcv">—</div><div class="k">CTC+</div></div>
+        <div class="half"><div class="v tnum big-align" id="fctcv">—</div><div class="k">FUNDED &amp; CTC+</div></div>
       </div>
     </div>
   </div>

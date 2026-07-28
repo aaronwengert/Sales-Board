@@ -15,10 +15,10 @@ export const BOARDS: Record<Channel, { title: string; goal: number }> = {
 };
 
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
-  "The Rainmakers": { channel: "wholesale", aes: ["Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
+  "The Rainmakers": { channel: "wholesale", aes: ["Brian Sherrill","Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
   "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","Jeff Laux","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua"] },
   "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Jeremy Rohrer","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby"] },
-  "CTC Crusaders": { channel: "wholesale", aes: ["Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
+  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
   "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
@@ -34,9 +34,27 @@ const FORMER_TEAM: Record<string, string> = { "aj laux": "The Rainmakers", "amar
 const RETIRE: Record<string, string> = {
   "aj laux": "2026-08-01",
   "adam paniagua": "2026-08-01",
+  "jeremy rohrer": "2026-08-01",
 };
 
+// Daily-goal exemptions (wholesale):
+// GOAL_DASH — kept on the board when they have production, but the TODAY
+//   columns render as dashes and they are excluded from the goal % (numerator
+//   and denominator). They are NOT seeded, so with no data they don't appear.
+// GOAL_EXEMPT — TODAY data stays live on their row, but they are excluded
+//   from the goal % math the same way.
+const GOAL_DASH = new Set(["eric ferguson","adam martin","brian sherrill","matthew cefalo","john giordano","jeremy rohrer","adam paniagua"]);
+const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
+
 const PIPE = new Set(["approved","condition review","in underwriting","final underwriting"]);
+// Doc-check stage counts as active pipeline (wholesale), regardless of age.
+const DOC_PIPE = new Set(["document check","document check failed"]);
+// "Soft" pipeline (wholesale): early-funnel loans count only while fresh —
+// their Loan Status Date must be within the last 30 days (rolling, AZ).
+const SOFT_PIPE = new Set(["loan open","registered","processing"]);
+// Stale flag: these statuses with no status change in 60+ days are flagged on
+// the tile and on the AE's row (they still count in the pipeline total).
+const STALE_PIPE = new Set(["approved","document check","document check failed"]);
 const CTC = new Set(["clear to close","docs out","docs back","docs ordered"]);
 const FUND = new Set(["funded","loan shipped","in purchase review","in final purchase review","ready for sale"]);
 
@@ -78,6 +96,9 @@ function counts(ae: string, channel: Channel) {
   return false;
 }
 
+// Shared roster/name helpers for the reporting engine (lib/report.ts).
+export const roster = { norm, nkey, canon, teamFor, chanFor, counts, retired, isFormer, mdy, TEAMS };
+
 function money(s: string) { const n = parseFloat((s || "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; }
 function mdy(s: string): { m: number; d: number; y: number } | null {
   const m = (s || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -93,15 +114,17 @@ function azDateOf(iso: string): { m: number; d: number; y: number } {
 }
 
 export type BoardData = {
-  rows: [string, string, number, number, number, number, number, number, number][];
+  rows: [string, string, number, number, number, number, number, number, number, number, number][];
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
   tix: Record<string, number>;
   tixTotal: number;
+  dashAEs: string[];
+  exemptAEs: string[];
   callsPending: boolean;
   tixPending: boolean;
   kpi: {
-    pipeline: number; pipeLocked: number; pipeUnlocked: number; lockedPct: number;
+    pipeline: number; pipeLocked: number; pipeUnlocked: number; lockedPct: number; pipeSoft: number; pipeStale: number; pipeStaleN: number;
     funded: number; fundedUnits: number; goalElig: number;
     ctc: number; ctcUnits: number; fundedCtc: number;
   };
@@ -138,13 +161,19 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   }
   const [ly, lm] = latestKey ? latestKey.split("-").map(Number) : [todayY, todayM];
 
-  type Agg = { pipe: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
+  type Agg = { pipe: number; pipeUn: number; stale: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
-  const A = (n: string) => (ae[n] ||= { pipe: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, stale: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
 
-  let pipeAll = 0, pipeLocked = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
+  let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
+  // 30-day cutoff for the soft-pipeline gate (rolling, Arizona).
+  const softCut = new Date(az); softCut.setDate(softCut.getDate() - 30);
+  const softCutKey = softCut.getFullYear() * 10000 + (softCut.getMonth() + 1) * 100 + softCut.getDate();
+  // 60-day cutoff for the stale flag.
+  const staleCut = new Date(az); staleCut.setDate(staleCut.getDate() - 60);
+  const staleCutKey = staleCut.getFullYear() * 10000 + (staleCut.getMonth() + 1) * 100 + staleCut.getDate();
 
   for (const r of rd) {
     const name = canon((r["Lender Account Executive Name"] || "").trim());
@@ -161,13 +190,29 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     // production); only correspondent is carved out.
     const chOk = channel === "correspondent" || ch !== "correspondent";
 
-    // Retail & correspondent desks live earlier in the funnel — count "Registered"
-    // as pipeline there for visibility. Wholesale keeps its stricter pipeline set.
-    const inPipe = PIPE.has(st) || (channel !== "wholesale" && st === "registered");
+    // Wholesale pipeline = core underwriting statuses + doc-check stage (any
+    // age) + soft pipeline (Loan Open / Registered / Processing whose status
+    // date is within the last 30 days). Retail & correspondent keep their
+    // simpler rule: core statuses + ungated Registered.
+    const sd = mdy(r["Loan Status Date"]);
+    const sdKey = sd ? sd.y * 10000 + sd.m * 100 + sd.d : 0;
+    const soft = channel === "wholesale" && SOFT_PIPE.has(st) && sdKey >= softCutKey;
+    const inPipe = PIPE.has(st)
+      || (channel === "wholesale" && DOC_PIPE.has(st))
+      || soft
+      || (channel !== "wholesale" && st === "registered");
 
     if (wh) {
       const a = A(name);
-      if (inPipe) { a.pipe += amt; pipeAll += amt; if (locked) pipeLocked += amt; }
+      if (inPipe) {
+        a.pipe += amt; pipeAll += amt;
+        if (locked) pipeLocked += amt; else a.pipeUn += amt;
+        if (soft) pipeSoft += amt;
+        // Stale: approved/doc-check loans that haven't moved in 60+ days.
+        if (channel === "wholesale" && STALE_PIPE.has(st) && sdKey > 0 && sdKey <= staleCutKey) {
+          a.stale += amt; pipeStale += amt; pipeStaleN += 1;
+        }
+      }
       else if (CTC.has(st)) { a.ctc += amt; a.ctcU += 1; ctcAll += amt; ctcUnits += 1; }
       else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
         // Funded production for the reporting month (correspondent carved out above).
@@ -190,7 +235,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   // show on the board — with their calls, tickets, and subs — even before they
   // have any funded production. (Runs before the calls/tickets fill below.)
   for (const [, d] of Object.entries(TEAMS)) {
-    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm)) A(nm);
+    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm) && !GOAL_DASH.has(norm(nm))) A(nm);
   }
 
   // Call activity → outbound calls + talk minutes per board AE.
@@ -240,7 +285,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
-    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU]);
+    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.stale]);
   }
   rows.sort((x, y) => y[7] - x[7]);
 
@@ -251,10 +296,12 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     mtd,
     tix,
     tixTotal,
+    dashAEs: [...GOAL_DASH].map((k) => NAME2DISPLAY[k] || k),
+    exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
     callsPending: !callsIsToday,
     tixPending: !(ticketsCsv && tixIsToday),
     kpi: {
-      pipeline: pipeAll, pipeLocked, pipeUnlocked, lockedPct: pipeAll ? pipeLocked / pipeAll * 100 : 0,
+      pipeline: pipeAll, pipeLocked, pipeUnlocked, lockedPct: pipeAll ? pipeLocked / pipeAll * 100 : 0, pipeSoft, pipeStale, pipeStaleN,
       funded: fundAll, fundedUnits: fundUnits, goalElig: eligAll,
       ctc: ctcAll, ctcUnits, fundedCtc: fundAll + ctcAll,
     },

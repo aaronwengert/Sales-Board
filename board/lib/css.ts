@@ -11,7 +11,7 @@ export const CSS = `
     -webkit-font-smoothing:antialiased;padding:10px 22px}
   @media(max-width:1200px){body{padding:6px}}
   #fithost{width:100%;overflow:hidden}
-  .wrap{width:1836px;margin:0 auto;transform-origin:top left}
+  .wrap{width:1936px;margin:0 auto;transform-origin:top left}
   .tnum{font-variant-numeric:tabular-nums}
   .kpiband{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
   .kpiband .card{flex:0 0 auto}
@@ -40,12 +40,12 @@ export const CSS = `
     box-shadow:0 0 0 2px rgba(42,91,191,.25),0 0 7px rgba(42,91,191,.40)}
   .dl-resc.dl-today{color:#fff;background:#c2740e;padding:1px 8px;border-radius:7px;
     box-shadow:0 0 0 2px rgba(224,138,23,.30),0 0 7px rgba(224,138,23,.45)}
-  .kt-today{width:376px}.kt-pipe{width:336px}.kt-funded{width:340px}.kt-ondeck{width:372px}
-  .combo .split{display:flex;margin-top:8px}
+  .kt-today{width:376px}.kt-pipe{width:436px}.kt-funded{width:340px}.kt-ondeck{width:372px}
+  .combo .split{display:flex;margin-top:7px}
   .combo .half{flex:1}
   .combo .half+.half{border-left:1px solid #f0e2c9;padding-left:14px}
-  .combo .half .k{font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.4px;margin-bottom:4px}
-  .combo .half .v{font-size:22px;font-weight:800;color:var(--accentink);line-height:1}
+  .combo .half .k{font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.4px;margin-top:6px}
+  .combo .half .v{font-size:25px;font-weight:800;color:var(--accentink);line-height:1}
   .combo .half .v span{font-size:12px;color:var(--muted);font-weight:600}
   .card{--accent:#2a5bbf;--accentink:#2a5bbf;--accenttint:#f3f6fd;
     position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;padding:12px 16px 11px;
@@ -70,6 +70,8 @@ export const CSS = `
   .pill.subs{background:#efeafc;color:#5b3ea8}
   .pillwrap{display:inline-flex;gap:6px;align-items:center}
   .pill.mtd{background:#eaf1fb;color:#2a5bbf}
+  .softadd{font-size:17px;color:#8b95a6;font-weight:800;letter-spacing:0}
+  .mval.stale-amt{color:#a06a12}
   .psplit{display:flex;margin-top:8px}
   .psplit .h{flex:1}
   .psplit .h+.h{border-left:1px solid #eef1f6;padding-left:12px}
