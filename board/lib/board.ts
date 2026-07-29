@@ -57,7 +57,9 @@ const SOFT_PIPE = new Set(["loan open","registered"]);
 // but flagged STALE; no movement for 60+ days → removed from the pipeline
 // (and from the stale number) entirely.
 const CTC = new Set(["clear to close","docs out","docs back","docs ordered"]);
-const FUND = new Set(["funded","loan shipped","in purchase review","in final purchase review","ready for sale"]);
+// "Loan Sold" counts as funded production by its Funded Date month, same as
+// the other post-funding statuses.
+const FUND = new Set(["funded","loan shipped","in purchase review","in final purchase review","ready for sale","loan sold"]);
 
 function norm(s: string) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); }
 // Identity aliases: fold two spellings of the same person onto one canonical
