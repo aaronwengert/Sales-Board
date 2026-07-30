@@ -142,12 +142,16 @@ export const CLIENT = `
   var now=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Phoenix'}));
   var y=now.getFullYear(), m=now.getMonth();
   var first=new Date(y,m,1), last=new Date(y,m+1,0), today=new Date(y,m,now.getDate());
-  var total=fundingDays(first,last), elapsed=fundingDays(first,today), remaining=fundingDays(new Date(y,m,now.getDate()+1),last);
+  // wire cutoff: today stops counting as a fundable day after 3:00 PM AZ
+  var WIRE_CUTOFF_HR=15;
+  var pastWire=(now.getHours()+now.getMinutes()/60)>=WIRE_CUTOFF_HR;
+  var rStart=pastWire?new Date(y,m,now.getDate()+1):today;
+  var total=fundingDays(first,last), elapsed=fundingDays(first,today), remaining=fundingDays(rStart,last);
   var pacePct=total?elapsed/total*100:0, paceTarget=GOAL*(total?elapsed/total:0);
   var fundedPct=(K.goalElig||0)/GOAL*100;
   $('titlemonth').textContent=MONTHS[m]+' '+y;
   $('fdleft').textContent=remaining;
-  $('fdsub').textContent='of '+total+' in '+MONTHS[m];
+  $('fdsub').textContent='of '+total+' in '+MONTHS[m]+(pastWire?' · wire cut':'');
   var ymKey=y+'-'+String(m+1).padStart(2,'0');
   function fmtDL(s){ var p=s.split('-'); return MONTHS[+p[1]-1].slice(0,3)+' '+(+p[2]); }
   function dlLive(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]) >= today; } // today or later
