@@ -46,13 +46,21 @@ const RETIRE: Record<string, string> = {
 const GOAL_DASH = new Set(["eric ferguson","adam martin","brian sherrill","matthew cefalo","john giordano","jeremy rohrer","adam paniagua"]);
 const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 
-const PIPE = new Set(["approved","condition review","in underwriting","final underwriting"]);
+// Regular ("hard") pipeline, all channels. Loan On-hold was added to the
+// Meridian Link export on 7/30/2026 and counts here like any other live file:
+// it hits the team pipeline tile and the AE pipeline column, and it ages into
+// the 30D+/60D+ idle bands the same way.
+const PIPE = new Set(["approved","condition review","in underwriting","final underwriting","loan on-hold","loan on hold"]);
 // Wholesale-only additions to the regular (hard) pipeline: doc-check stage
 // plus Processing.
 const HARD_EXTRA = new Set(["document check","document check failed","processing"]);
 // "Soft" pipeline (wholesale): early-funnel loans count only while fresh —
 // their Loan Status Date must be within the last 30 days (rolling, AZ).
 const SOFT_PIPE = new Set(["loan open","registered"]);
+// Statuses that still count toward the team pipeline tile but NOT toward an
+// individual AE's pipeline column: early-funnel files (Loan Open, Registered)
+// and pre-underwriting Processing.
+const AE_PIPE_EXCLUDE = new Set(["loan open","registered","processing"]);
 // Aging rules (wholesale hard pipeline): no movement for 30–59 days → counted
 // but flagged STALE; no movement for 60+ days → removed from the pipeline
 // (and from the stale number) entirely.
@@ -164,18 +172,19 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   }
   const [ly, lm] = latestKey ? latestKey.split("-").map(Number) : [todayY, todayM];
 
-  type Agg = { pipe: number; pipeUn: number; soft: number; stale: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
+  type Agg = { pipe: number; pipeUn: number; b30: number; b60: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
-  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, soft: 0, stale: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
-  // 30-day boundary (rolling, Arizona): soft-pipeline freshness gate AND the
-  // start of the stale flag for hard-pipeline loans (no upper bound — idle
-  // hard loans stay in the pipeline and stay flagged stale).
+  // Aging boundaries (rolling, Arizona). 30 days: soft-pipeline freshness
+  // gate and the start of the idle bands; 60 days: the 30–59d / 60+d split.
   const softCut = new Date(az); softCut.setDate(softCut.getDate() - 30);
   const softCutKey = softCut.getFullYear() * 10000 + (softCut.getMonth() + 1) * 100 + softCut.getDate();
+  const cut60 = new Date(az); cut60.setDate(cut60.getDate() - 60);
+  const cut60Key = cut60.getFullYear() * 10000 + (cut60.getMonth() + 1) * 100 + cut60.getDate();
 
   for (const r of rd) {
     const name = canon((r["Lender Account Executive Name"] || "").trim());
@@ -205,17 +214,33 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const inPipe = hard
       || soft
       || (channel !== "wholesale" && st === "registered");
+    // Per-AE pipeline is stricter than the team pipeline: the early-funnel and
+    // pre-underwriting statuses (Loan Open, Registered, Processing) are held to
+    // be too soft to credit against an individual AE, so their rows show only
+    // files that have reached underwriting or doc check. The team tile keeps
+    // counting them, so the AE column deliberately does NOT sum to the tile.
+    const inPipeAE = inPipe && !AE_PIPE_EXCLUDE.has(st);
 
     if (wh) {
       const a = A(name);
       if (inPipe) {
-        a.pipe += amt; pipeAll += amt;
-        if (locked) pipeLocked += amt; else a.pipeUn += amt;
-        if (soft) { pipeSoft += amt; a.soft += amt; }
-        if (isStale) { a.stale += amt; pipeStale += amt; pipeStaleN += 1; }
+        pipeAll += amt;
+        if (locked) pipeLocked += amt;
+        if (soft) pipeSoft += amt;
+        if (isStale) { pipeStale += amt; pipeStaleN += 1; }
       }
-      else if (CTC.has(st)) { a.ctc += amt; a.ctcU += 1; ctcAll += amt; ctcUnits += 1; }
-      else if (FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
+      if (inPipeAE) {
+        a.pipe += amt;
+        if (!locked) a.pipeUn += amt;
+        // Idle bands for hard-pipeline loans: 30–59 days / 60+ days since the
+        // last status change.
+        if (isStale) { if (sdKey <= cut60Key) a.b60 += amt; else a.b30 += amt; }
+      }
+      // A loan counted anywhere in the pipeline never also counts as CTC or
+      // funded — gate on inPipe (the team rule), not the stricter AE rule, so
+      // dropping a status from the AE column can't leak it into On Deck.
+      if (!inPipe && CTC.has(st)) { a.ctc += amt; a.ctcU += 1; ctcAll += amt; ctcUnits += 1; }
+      else if (!inPipe && FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
         // Funded production for the reporting month (correspondent carved out above).
         a.fund += amt; a.units += 1; fundAll += amt; fundUnits += 1;
         a.goalElig += amt; eligAll += amt;
@@ -287,7 +312,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
-    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.stale, a.soft]);
+    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.b30, a.b60]);
   }
   rows.sort((x, y) => y[7] - x[7]);
 
