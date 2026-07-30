@@ -24,8 +24,6 @@ export const CSS = `
   .cl-title{font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.08;color:var(--ink)}
   .cl-month{margin-top:4px;font-size:16px;font-weight:800;letter-spacing:.2px;color:var(--green);
     line-height:1;display:inline-flex;align-items:center}
-  .cl-month::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);
-    margin-right:7px;box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 18%,#fff)}
   .cl-days{display:flex;align-items:center;gap:11px;border-top:1px solid #e2e7ee;padding-top:9px;margin-top:10px}
   .cl-days .dl-n{font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--green);line-height:1}
   .cl-days .dl-meta{min-width:0}
@@ -59,8 +57,6 @@ export const CSS = `
   .card.k-violet{--accent:#6b4fbb;--accentink:#5b3ea8;--accenttint:#f4f0fc}
   .krow{display:flex;justify-content:space-between;align-items:center;min-height:18px}
   .klabel{font-size:11.5px;font-weight:800;letter-spacing:.5px;color:var(--muted);display:inline-flex;align-items:center}
-  .klabel::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);
-    margin-right:7px;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,#fff)}
   .big{font-size:25px;font-weight:800;margin-top:7px;line-height:1;color:var(--accentink)}
   .big span{font-size:14px;font-weight:600;color:var(--muted)}
   .ksub{margin-top:6px;color:var(--ink2);font-size:12px}
@@ -71,8 +67,9 @@ export const CSS = `
   .pillwrap{display:inline-flex;gap:6px;align-items:center}
   .pill.mtd{background:#eaf1fb;color:#2a5bbf}
   .softadd{font-size:17px;color:#8b95a6;font-weight:800;letter-spacing:0}
-  .mval.stale-amt{color:#a06a12}
-  .mval.soft-amt{color:#7d8aa0}
+  .mval.b30{color:#a06a12}
+  .mval.b60{color:#b03a2e}
+  .unpct{font-size:10.5px;color:var(--muted);font-weight:700}
   .psplit{display:flex;margin-top:8px}
   .psplit .h{flex:1}
   .psplit .h+.h{border-left:1px solid #eef1f6;padding-left:12px}
@@ -118,10 +115,12 @@ export const CSS = `
   .tot{font-weight:800;font-size:12.5px;color:var(--ink)}
   tr.altrow td{background:#f3f6fa}
   .banner{background:#fff7e6;border:1px solid #f0dca6;color:#8a6d1e;border-radius:12px;padding:14px 18px;margin-top:14px;font-size:14px}
+  /* Pipeline tier pills: dark green $15M+, light green $10–15M, yellow $7.5–10M, red <$7.5M */
   .pk{padding:1px 8px;border-radius:7px;display:inline-block;font-weight:800}
-  .pk-decent{background:#eddac0;color:#8a5424;box-shadow:inset 0 0 0 1px #dcc09a}   /* bronze  $7.5M+ */
-  .pk-good{background:#e2e7ed;color:#56626f;box-shadow:inset 0 0 0 1px #cdd4dd}     /* silver  $10M+ */
-  .pk-best{background:#f6e39a;color:#7a5f0e;box-shadow:inset 0 0 0 1px #e6cd6a}     /* gold    $15M+ */
+  .pk-t1{background:#127a3c;color:#fff}
+  .pk-t2{background:#d9f2e2;color:#127a3c;box-shadow:inset 0 0 0 1px #b4e2c6}
+  .pk-t3{background:#faf0c0;color:#8a6d0a;box-shadow:inset 0 0 0 1px #ecdd90}
+  .pk-t4{background:#fadbd8;color:#a03530;box-shadow:inset 0 0 0 1px #f0bcb8}
 
   /* ── Mobile stacked view (< 768px): hide the TV grid, show cards ── */
   .mroot{display:none}
