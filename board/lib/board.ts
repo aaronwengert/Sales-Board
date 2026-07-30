@@ -172,12 +172,10 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
   // 30-day boundary (rolling, Arizona): soft-pipeline freshness gate AND the
-  // start of the stale band for hard-pipeline loans.
+  // start of the stale flag for hard-pipeline loans (no upper bound — idle
+  // hard loans stay in the pipeline and stay flagged stale).
   const softCut = new Date(az); softCut.setDate(softCut.getDate() - 30);
   const softCutKey = softCut.getFullYear() * 10000 + (softCut.getMonth() + 1) * 100 + softCut.getDate();
-  // 60-day boundary: hard-pipeline loans idle this long drop out entirely.
-  const staleCut = new Date(az); staleCut.setDate(staleCut.getDate() - 60);
-  const staleCutKey = staleCut.getFullYear() * 10000 + (staleCut.getMonth() + 1) * 100 + staleCut.getDate();
 
   for (const r of rd) {
     const name = canon((r["Lender Account Executive Name"] || "").trim());
@@ -195,17 +193,16 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const chOk = channel === "correspondent" || ch !== "correspondent";
 
     // Wholesale pipeline = hard statuses (core underwriting + doc-check +
-    // Processing) with aging rules, plus soft pipeline (Loan Open / Registered
-    // whose status date is within the last 30 days). Hard loans idle 30–59
-    // days are flagged stale; idle 60+ days they drop out entirely. Retail &
-    // correspondent keep their simpler rule: core statuses + ungated Registered.
+    // Processing, any age), plus soft pipeline (Loan Open / Registered whose
+    // status date is within the last 30 days). Hard loans idle 30+ days are
+    // flagged stale but stay in the pipeline. Retail & correspondent keep
+    // their simpler rule: core statuses + ungated Registered.
     const sd = mdy(r["Loan Status Date"]);
     const sdKey = sd ? sd.y * 10000 + sd.m * 100 + sd.d : 0;
     const hard = PIPE.has(st) || (channel === "wholesale" && HARD_EXTRA.has(st));
-    const aged = channel === "wholesale" && hard && sdKey > 0 && sdKey <= staleCutKey; // 60+ days idle → out
-    const isStale = channel === "wholesale" && hard && !aged && sdKey > 0 && sdKey <= softCutKey; // 30–59 days idle
+    const isStale = channel === "wholesale" && hard && sdKey > 0 && sdKey <= softCutKey; // 30+ days idle
     const soft = channel === "wholesale" && SOFT_PIPE.has(st) && sdKey >= softCutKey;
-    const inPipe = (hard && !aged)
+    const inPipe = hard
       || soft
       || (channel !== "wholesale" && st === "registered");
 
