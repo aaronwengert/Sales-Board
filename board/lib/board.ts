@@ -163,14 +163,17 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   const az = azNow();
   const todayM = az.getMonth() + 1, todayD = az.getDate(), todayY = az.getFullYear();
 
-  // Determine latest funded month across the file.
-  let latestKey = ""; // "YYYY-MM"
-  for (const r of rd) {
-    const st = (r["Loan Status"] || "").trim().toLowerCase();
-    const fd = mdy(r["Funded Date"]);
-    if (FUND.has(st) && fd) { const k = `${fd.y}-${String(fd.m).padStart(2, "0")}`; if (k > latestKey) latestKey = k; }
-  }
-  const [ly, lm] = latestKey ? latestKey.split("-").map(Number) : [todayY, todayM];
+  // Reporting month = the CURRENT calendar month in Arizona, always.
+  //
+  // This used to be derived from the latest Funded Date present in the file,
+  // which held the prior month over until the first loan of the new month
+  // funded. That broke on 8/1/2026: the header and the funding-day counter
+  // (both computed client-side from today's date) had rolled to August while
+  // the funded/subs figures were still July's, so the board read
+  // "August 2026 — $119.15M funded" on a month with zero fundings. The board
+  // now rolls to $0 at midnight on the 1st and fills in as loans fund, which
+  // is the honest reading.
+  const ly = todayY, lm = todayM;
 
   type Agg = { pipe: number; pipeUn: number; b30: number; b60: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
