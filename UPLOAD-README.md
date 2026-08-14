@@ -5,7 +5,7 @@ exactly as they are in this zip. Vercel redeploys on push; nothing else to do.
 
     board/lib/tv2.ts        NEW      the rotating view
     board/lib/BoardView.tsx CHANGED  loads the rotating view alongside the classic one
-    board/lib/board.ts      CHANGED  House account (Reese Rogers, Jeff Laux)
+    board/lib/board.ts      CHANGED  roster: House account + Adam Paniagua back on
 
 Do not upload anything else. In particular, leave `board/public/logo.png` alone —
 the copy already on GitHub is the correct OFC tree mark.
@@ -48,17 +48,25 @@ To lock the speed for everyone and skip the control, put it in the URL instead �
 `?tv=2&sec=45` — which wins over the buttons. `?tv=2&screen=s1` or `&screen=s2`
 freezes on one screen with no rotation.
 
-## What changed in board.ts
+## Roster changes in board.ts
 
-Reese Rogers and Jeff Laux no longer appear as rows. Their loans still count in
-the tiles at the top — Reese's funded production stays inside the FUNDED
-PRODUCTION number rather than disappearing from the month. There is no visible
-"House" row; the money simply lives in the totals.
+Three lists near the top of the file control who appears:
 
-To add someone to the House account later, add their name to the `HOUSE` set
-near the top of `board.ts`. To remove someone from the board entirely, along
-with their production, use the existing `RETIRE` list instead.
+**RETIRE** — drops an AE off the board entirely on/after a date, production and
+all. Adam Paniagua was here with 2026-08-01 and has now been removed, so he is
+back on the board with his pipeline and funded production counting again.
 
-Note this affects the classic board too — Reese and Jeff are gone from both
-views, which is almost certainly what you want, but it is worth knowing before
-you push.
+**HOUSE** — Reese Rogers and Jeff Laux. No row on the board, no rank, no daily
+goal, but every dollar on their loans still counts in the tiles at the top, so
+removing a rep never deletes production from the month. There is no visible
+"House" row; the money just lives in the totals.
+
+**GOAL_DASH** — on the board, but the TODAY columns render as dashes and the AE
+is left out of the daily-goal percentage entirely. Adam Paniagua is on this list,
+which is why his call and talk figures show as dashes.
+
+If you later want Adam's live activity to show while still keeping him out of the
+goal math, move his name from `GOAL_DASH` to `GOAL_EXEMPT` — same exemption, but
+the TODAY numbers stay visible.
+
+All of this affects the classic board as well as the rotating one.

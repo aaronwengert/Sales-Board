@@ -33,7 +33,6 @@ const FORMER_TEAM: Record<string, string> = { "aj laux": "The Rainmakers", "amar
 // the removal happens automatically without a redeploy.
 const RETIRE: Record<string, string> = {
   "aj laux": "2026-08-01",
-  "adam paniagua": "2026-08-01",
   "jeremy rohrer": "2026-08-01",
 };
 
