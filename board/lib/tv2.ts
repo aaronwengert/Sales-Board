@@ -21,102 +21,124 @@
 //   ?tv=2                 rotate both screens, 30s each
 //   ?tv=2&sec=20          override dwell time (seconds)
 //   ?tv=2&screen=s1       pin a single screen, no rotation (s1|s2)
+//
+// On screen there is also a dwell-time control (15s / 30s / 45s / 1m / 2m and
+// Pause) that fades in on any mouse move, tap, or key press and fades back out
+// after four seconds. The choice is remembered per device, so it survives the
+// board's own five-minute reload. Left/right arrow keys page manually.
 
 export const TV2_CSS = `
 .tv2hide{display:none!important}
 #tv2host{position:fixed;inset:0;background:var(--bg);overflow:hidden;z-index:50}
 #tv2board{width:1920px;height:1080px;transform-origin:top left;position:absolute;top:0;left:0;
   display:flex;flex-direction:column;padding:20px 28px 16px;box-sizing:border-box;font-family:inherit}
-.tv2track{position:absolute;top:0;left:0;right:0;height:9px;background:#d9e0ea;z-index:4}
-.tv2prog{position:absolute;top:0;left:0;height:9px;background:#2f6f43;width:0;z-index:5;
-  box-shadow:0 0 0 1px rgba(0,0,0,.04)}
+.tv2track{position:absolute;top:0;left:0;right:0;height:4px;background:#dde4ec;z-index:4}
+.tv2prog{position:absolute;top:0;left:0;height:4px;background:#2f6f43;width:0;z-index:5}
 
 /* ---- header ---- */
 .tv2hdr{display:flex;align-items:center;gap:20px;flex:0 0 auto}
 .tv2id{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);
   border-radius:14px;padding:10px 20px 10px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .tv2logo{height:54px;width:auto;display:block}
-.tv2brand .t1{font-size:30px;font-weight:900;letter-spacing:-.4px;color:var(--ink);line-height:1.05}
-.tv2brand .t2{font-size:19px;font-weight:800;color:#2f6f43;margin-top:2px}
+.tv2brand .t1{font-size:29px;font-weight:800;letter-spacing:-.4px;color:var(--ink);line-height:1.05}
+.tv2brand .t2{font-size:18px;font-weight:600;color:#2f6f43;margin-top:2px}
 .tv2days{display:flex;align-items:center;gap:11px;padding-left:20px;border-left:2px solid var(--line)}
-.tv2days .n{font-size:42px;font-weight:900;color:#2f6f43;line-height:1}
-.tv2days .dt{font-size:15px;font-weight:800;color:var(--ink)}
-.tv2days .ds{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:1px}
+.tv2days .n{font-size:40px;font-weight:800;color:#2f6f43;line-height:1}
+.tv2days .dt{font-size:14.5px;font-weight:600;color:var(--ink)}
+.tv2days .ds{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
 .tv2dl{display:flex;align-items:center;gap:20px;padding-left:22px;border-left:2px solid var(--line)}
 .tv2dl .d{line-height:1.1}
-.tv2dl .k{font-size:11.5px;font-weight:900;letter-spacing:.7px;color:var(--muted)}
-.tv2dl .v{font-size:25px;font-weight:900;letter-spacing:-.3px;margin-top:2px}
-.tv2dl .s{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:1px}
+.tv2dl .k{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+.tv2dl .v{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-top:2px}
+.tv2dl .s{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px}
 .tv2dl .cd .v{color:#2a5bbf}
 .tv2dl .rs .v{color:#c2740e}
 .tv2dl .v.now{color:#fff;padding:1px 10px;border-radius:8px}
 .tv2dl .cd .v.now{background:#2a5bbf}
 .tv2dl .rs .v.now{background:#c2740e}
 .tv2sec{margin-left:auto;text-align:right}
-.tv2sec .s1{font-size:24px;font-weight:900;letter-spacing:.6px;color:var(--ink)}
-.tv2sec .s2{font-size:13px;font-weight:800;color:var(--muted);margin-top:3px;letter-spacing:.5px}
+.tv2sec .s1{font-size:23px;font-weight:800;letter-spacing:.6px;color:var(--ink)}
+.tv2sec .s2{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.5px}
 .tv2dots{display:flex;gap:7px;justify-content:flex-end;margin-top:6px}
 .tv2dots i{width:30px;height:5px;border-radius:3px;background:#d7dee8}
 .tv2dots i.on{background:#2f6f43}
 
 /* ---- KPI band: exactly two tiles, one per section below ---- */
 .tv2band{display:flex;gap:20px;margin-top:12px;flex:0 0 auto}
-.tv2band .card{flex:1;height:150px;border-radius:14px;padding:14px 22px;box-sizing:border-box;position:relative;overflow:hidden}
+.tv2band .card{flex:1;height:156px;border-radius:14px;padding:13px 22px 12px;box-sizing:border-box;position:relative;overflow:hidden}
 .tv2band .krow{display:flex;align-items:center;justify-content:space-between}
 .tv2band .k-amber .pill{background:#fdf0d8;color:#8a6d0a;box-shadow:inset 0 0 0 1px #f0dcae}
 .tv2band .k-green .pill.ahead,.tv2band .k-green .pill.behind{}
-.tv2band .kl{font-size:16px;font-weight:900;letter-spacing:1px;color:var(--muted)}
-.tv2band .kb{font-size:52px;font-weight:900;letter-spacing:-1.4px;line-height:1.04;margin-top:1px;white-space:nowrap}
+.tv2band .kl{font-size:14.5px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+.tv2band .kb{font-size:41px;font-weight:800;letter-spacing:-1px;line-height:1.05;margin-top:2px;white-space:nowrap}
 .tv2band .kn{font-size:15px;font-weight:700;color:var(--muted);margin-top:6px}
-.tv2band .sub{font-size:23px;font-weight:800;color:#8b95a6;letter-spacing:0}
+.tv2band .sub{font-size:19px;font-weight:600;color:#8b95a6;letter-spacing:0}
 /* every tile has the same anatomy: label row, big number, bar, three stats */
-.tv2split{display:flex;margin-top:7px}
+.tv2split{display:flex;margin-top:11px}
 .tv2split .h{flex:1 1 0}
 .tv2split .h.r{text-align:right}
-.tv2split .h .k{font-size:12.5px;font-weight:900;letter-spacing:.8px;color:var(--muted)}
-.tv2split .h .v{font-size:24px;font-weight:900;line-height:1.15}
-.tv2bar{height:7px;border-radius:4px;background:#e6ebf2;margin-top:9px;position:relative;overflow:hidden}
+.tv2split .h .k{font-size:11.5px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+.tv2split .h .v{font-size:22px;font-weight:700;line-height:1.2;margin-top:2px}
+.tv2bar{height:6px;border-radius:4px;background:#e6ebf2;margin-top:10px;position:relative;overflow:hidden}
 .tv2bar i{display:block;height:100%;border-radius:4px}
 .tv2bar .mk{position:absolute;top:-2px;width:3px;height:11px;background:#334;border-radius:2px}
 
 /* ---- the two roster columns ---- */
-.tv2grid{flex:1 1 auto;margin-top:12px;min-height:0;display:flex;gap:20px}
-.tv2col{flex:1 1 0;min-width:0}
-table.tv2t{width:100%;border-collapse:collapse;table-layout:fixed}
-table.tv2t th{font-size:11.5px;font-weight:900;letter-spacing:.3px;color:var(--muted);text-align:right;padding:0 4px 7px}
+/* One white panel per column, hairline rules between rows, and group identity
+   carried by a colored underline under the group name rather than a filled bar.
+   The pipeline tier keeps its filled chip — it is the one place on the screen
+   where color is doing real work. */
+.tv2grid{flex:1 1 auto;margin-top:14px;min-height:0;display:flex;gap:24px}
+.tv2col{flex:1 1 0;min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 15px 8px}
+table.tv2t{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+table.tv2t th{font-size:10.5px;font-weight:600;letter-spacing:.4px;color:var(--muted);text-align:right;padding:9px 6px 6px}
 table.tv2t th.l{text-align:left;padding-left:4px}
-table.tv2t th.gh{color:#fff;font-size:15px;text-align:center;padding:5px 0;border-radius:7px;letter-spacing:.8px}
-table.tv2t th.gh0{background:#6b4fbb}
-table.tv2t th.gh1{background:#2a5bbf}
-table.tv2t th.gh2{background:#1a8a48}
-table.tv2t th.gh3{background:#d98c1a}
-table.tv2t td{text-align:right;padding:0 5px;font-variant-numeric:tabular-nums}
-table.tv2t td.l{text-align:left;padding-left:4px}
-table.tv2t td.sp,table.tv2t th.sp{padding:0}
+table.tv2t th.gh{font-size:12px;font-weight:600;letter-spacing:1.2px;text-align:left;padding:2px 6px 7px;color:#5c6a7a}
+table.tv2t th.gh span{display:block;padding-bottom:6px;border-bottom:3px solid currentColor}
+table.tv2t th.gh0 span{color:#7a63c4}
+table.tv2t th.gh1 span{color:#3f6cc9}
+table.tv2t th.gh2 span{color:#2f9558}
+table.tv2t th.gh3 span{color:#d9942c}
+table.tv2t td{text-align:right;padding:0 6px;font-variant-numeric:tabular-nums;
+  font-size:17.5px;font-weight:400;border-bottom:1px solid #f1f4f8}
+table.tv2t tr:last-child td{border-bottom:none}
+table.tv2t td.l{text-align:left;padding-left:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+table.tv2t td.sp,table.tv2t th.sp{padding:0;border-bottom:none}
 .tv2row{height:var(--tv2rh,34px)}
-.tv2row.alt td{background:#f4f7fb}
-table.tv2t td.l{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.tv2rank{display:inline-block;width:28px;font-size:14.5px;font-weight:900;color:#aab4c2}
-.tv2name{font-size:19px;font-weight:800;color:var(--ink)}
-.tv2team{font-size:11px;font-weight:700;color:var(--muted);margin-left:6px}
-.tv2v{font-size:19px;font-weight:800;color:var(--ink)}
-.tv2v.z{color:#c3ccd9}
-.tv2v.b30{color:#a06a12}
+table.tv2t th.rk{text-align:right;padding-right:13px}
+table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d1}
+.tv2name{font-size:17.5px;font-weight:400;color:var(--ink)}
+.tv2v{font-size:17.5px;font-weight:400;color:var(--ink)}
+.tv2v.z{color:#ccd4de}
 .tv2v.b60{color:#b03a2e}
-.tv2hit{color:#127a3c}
-.tv2dash{color:#c3ccd9;font-weight:800}
-.tv2chk{font-size:20px;font-weight:900;color:#1a9e4e}
-.tv2chk.empty{color:#dbe2ea}
-.tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:900;font-size:19px}
+.tv2hit{color:#127a3c;font-weight:600}
+.tv2dash{color:#ccd4de}
+.tv2chk{font-size:17.5px;font-weight:600;color:#1a9e4e}
+.tv2chk.empty{display:none}
+.tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:500;font-size:17.5px}
 .tv2pk.t1{background:#127a3c;color:#fff}
-.tv2pk.t2{background:#d9f2e2;color:#127a3c;box-shadow:inset 0 0 0 1px #b4e2c6}
-.tv2pk.t3{background:#faf0c0;color:#8a6d0a;box-shadow:inset 0 0 0 1px #ecdd90}
-.tv2pk.t4{background:#fadbd8;color:#a03530;box-shadow:inset 0 0 0 1px #f0bcb8}
-.tv2circle{display:inline-block;padding:2px 12px;border-radius:18px;background:#127a3c;color:#fff;font-weight:900;font-size:19px}
-.tv2frow{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end}
-.tv2g5{width:50px;height:8px;border-radius:5px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
+.tv2pk.t2{background:#dcf3e4;color:#116b36}
+.tv2pk.t3{background:#fbf2c9;color:#836607}
+.tv2pk.t4{background:#fbdedb;color:#9c352f}
+.tv2circle{display:inline-block;padding:2px 12px;border-radius:18px;background:#127a3c;color:#fff;font-weight:500;font-size:17.5px}
+.tv2frow{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.tv2g5{width:48px;height:7px;border-radius:5px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
 .tv2g5 i{display:block;height:100%}
-.tv2g5p{font-size:12.5px;font-weight:800;color:var(--muted);width:30px;text-align:right}
+.tv2g5p{font-size:11.5px;font-weight:500;color:var(--muted);width:28px;text-align:right}
+.tv2lgd{display:flex;gap:20px;justify-content:flex-end;margin-top:7px;flex:0 0 auto;
+  font-size:11.5px;font-weight:500;color:var(--muted)}
+.tv2lgd i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+/* ---- dwell-time control (fades in on mouse move / tap) ---- */
+.tv2ctl{position:fixed;right:18px;bottom:16px;z-index:60;display:flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:11px;padding:7px 9px;
+  box-shadow:0 2px 10px rgba(16,24,40,.12);opacity:0;pointer-events:none;transition:opacity .25s}
+.tv2ctl.show{opacity:1;pointer-events:auto}
+.tv2ctl .lb{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--muted);margin-right:2px}
+.tv2ctl button{font:700 14px/1 inherit;color:#44506180;color:#455061;background:#f2f5f9;border:1px solid #e2e8f0;
+  border-radius:8px;padding:7px 11px;cursor:pointer}
+.tv2ctl button:hover{background:#e8eef6}
+.tv2ctl button.on{background:#2f6f43;border-color:#2f6f43;color:#fff}
 `;
 
 export const TV2 = `
@@ -279,15 +301,15 @@ export const TV2 = `
   // S1 — TODAY + ACTIVITY & PIPELINE, ranked by pipeline size.
   function colS1(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:241px"><col style="width:4px">'
-      +'<col style="width:53px"><col style="width:51px"><col style="width:32px"><col style="width:38px"><col style="width:47px"><col style="width:4px">'
-      +'<col style="width:41px"><col style="width:124px"><col style="width:105px"><col style="width:91px"><col style="width:91px"></colgroup>';
-    h+='<tr><th class="l"></th><th class="sp"></th><th class="gh gh0" colspan="5">TODAY</th><th class="sp"></th><th class="gh gh1" colspan="5">ACTIVITY &amp; PIPELINE</th></tr>';
-    h+='<tr><th class="l">AE</th><th class="sp"></th><th>CALLS</th><th>TALK</th><th>TIX</th><th>SUB</th><th>GOAL</th><th class="sp"></th>'
-      +'<th>MTD</th><th>PIPELINE</th><th>UNLOCKED</th><th>30-59D</th><th>60D+</th></tr>';
+      +'<col style="width:44px"><col style="width:206px"><col style="width:14px">'
+      +'<col style="width:54px"><col style="width:52px"><col style="width:36px"><col style="width:40px"><col style="width:46px"><col style="width:14px">'
+      +'<col style="width:42px"><col style="width:142px"><col style="width:102px"><col style="width:94px"></colgroup>';
+    h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh0" colspan="5"><span>TODAY</span></th><th class="sp"></th><th class="gh gh1" colspan="4"><span>ACTIVITY &amp; PIPELINE</span></th></tr>';
+    h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>CALLS</th><th>TALK</th><th>TIX</th><th>SUB</th><th>GOAL</th><th class="sp"></th>'
+      +'<th>MTD</th><th>PIPELINE</th><th>UNLOCKED</th><th>60D+</th></tr>';
     rows.forEach(function(r,i){
       var rank=startRank+i;
-      var n=r[0],tm=r[1],pipe=r[2],pipeUn=r[9]||0,b30=r[10]||0,b60=r[11]||0;
+      var n=r[0],pipe=r[2],pipeUn=r[9]||0,b60=r[11]||0;
       var td=TODAY[n]||[0,0,0], tixN=TIX[n]||0;
       var isDash=!!DASH[n];
       var cHit=!isDash&&!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&td[1]>=TALK_GOAL;
@@ -295,8 +317,8 @@ export const TV2 = `
       var met=cHit||tHit||sHit||xHit;
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
-      h+='<tr class="tv2row'+(i%2?' alt':'')+'">'
-        +'<td class="l"><span class="tv2rank">'+rank+'</span><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
+      h+='<tr class="tv2row">'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
         +'<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
         +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
         +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
@@ -305,7 +327,6 @@ export const TV2 = `
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
         +'<td><span class="tv2pk '+pk+'">'+mM(pipe)+'</span></td>'
         +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'
-        +'<td><span class="tv2v'+(b30?' b30':' z')+'">'+mM(b30)+'</span></td>'
         +'<td><span class="tv2v'+(b60?' b60':' z')+'">'+mM(b60)+'</span></td></tr>';
     });
     return h+'</table>';
@@ -314,20 +335,20 @@ export const TV2 = `
   // S2 — FUNDED PRODUCTION + ON DECK, ranked by funded + CTC+ total.
   function colS2(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:240px"><col style="width:10px">'
-      +'<col style="width:60px"><col style="width:230px"><col style="width:100px"><col style="width:10px">'
-      +'<col style="width:60px"><col style="width:106px"><col style="width:106px"></colgroup>';
-    h+='<tr><th class="l"></th><th class="sp"></th><th class="gh gh2" colspan="3">FUNDED PRODUCTION</th><th class="sp"></th><th class="gh gh3" colspan="3">ON DECK</th></tr>';
-    h+='<tr><th class="l">AE</th><th class="sp"></th><th>UNITS</th><th>FUNDED / $3M</th><th>AVG</th><th class="sp"></th>'
+      +'<col style="width:44px"><col style="width:222px"><col style="width:14px">'
+      +'<col style="width:54px"><col style="width:200px"><col style="width:96px"><col style="width:14px">'
+      +'<col style="width:54px"><col style="width:100px"><col style="width:88px"></colgroup>';
+    h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh2" colspan="3"><span>FUNDED PRODUCTION</span></th><th class="sp"></th><th class="gh gh3" colspan="3"><span>ON DECK</span></th></tr>';
+    h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>UNITS</th><th>FUNDED / $3M</th><th>AVG</th><th class="sp"></th>'
       +'<th>UNITS</th><th>CTC+</th><th>TOTAL</th></tr>';
     rows.forEach(function(r,i){
       var rank=startRank+i;
-      var n=r[0],tm=r[1],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
+      var n=r[0],u=r[3],f=r[4],avg=r[5],ctc=r[6],tot=r[7],ctcU=r[8];
       var fp=Math.min(100,Math.round(f/3e6*100));
       var fcell = f>=3e6 ? '<span class="tv2circle">'+mM(f)+'</span>'
         : '<span class="tv2frow"><span class="tv2v">'+mM(f)+'</span><span class="tv2g5"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="tv2g5p">'+fp+'%</span></span>';
-      h+='<tr class="tv2row'+(i%2?' alt':'')+'">'
-        +'<td class="l"><span class="tv2rank">'+rank+'</span><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
+      h+='<tr class="tv2row">'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
         +'<td><span class="tv2v">'+u+'</span></td>'
         +'<td>'+fcell+'</td>'
         +'<td><span class="tv2v">'+mK(avg)+'</span></td><td class="sp"></td>'
@@ -338,8 +359,13 @@ export const TV2 = `
     return h+'</table>';
   }
 
+  var TIERLBL=[['#127a3c','$15M+'],['#dcf3e4','$10M+'],['#fbf2c9','$7.5M+'],['#fbdedb','under $7.5M']];
+  var LEGEND='<div class="tv2lgd">'+TIERLBL.map(function(t){
+    return '<span><i style="background:'+t[0]+(t[0]==='#127a3c'?'':';box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)')+'"></i>'+t[1]+'</span>';
+  }).join('')+'</div>';
+
   var SCREENS=[
-    {id:'s1', name:'TODAY &amp; PIPELINE',   sub:'RANKED BY PIPELINE SIZE',        data:BY_PIPE,  band:function(){return tileGoal()+tilePipe();},   col:colS1},
+    {id:'s1', name:'TODAY &amp; PIPELINE',   sub:'RANKED BY PIPELINE SIZE',        data:BY_PIPE,  band:function(){return tileGoal()+tilePipe();},   col:colS1, legend:true},
     {id:'s2', name:'FUNDED &amp; ON DECK',   sub:'RANKED BY FUNDED + CTC+ TOTAL',  data:BY_TOTAL, band:function(){return tileFunded()+tileDeck();}, col:colS2}
   ];
   if(PIN){ var f=SCREENS.filter(function(s){return s.id===PIN;}); if(f.length) SCREENS=f; }
@@ -359,17 +385,21 @@ export const TV2 = `
       +'<div class="tv2dots">'+dots+'</div></div></div>';
     board.innerHTML = hdr
       + '<div class="tv2band">'+s.band()+'</div>'
-      + '<div class="tv2grid"><div class="tv2col">'+s.col(L,1)+'</div><div class="tv2col">'+s.col(R,SPLIT+1)+'</div></div>';
+      + '<div class="tv2grid"><div class="tv2col">'+s.col(L,1)+'</div><div class="tv2col">'+s.col(R,SPLIT+1)+'</div></div>'
+      + (s.legend ? LEGEND : '');
 
     // size rows to exactly fill the space left under the tiles
-    var grid=board.querySelector('.tv2grid'), tb=grid.querySelector('table.tv2t');
+    var grid=board.querySelector('.tv2grid'), colEl=grid.querySelector('.tv2col'), tb=colEl.querySelector('table.tv2t');
     var hdrH=tb.rows[0].offsetHeight+tb.rows[1].offsetHeight;
+    // the column panel's own padding and border eat into the space the rows get
+    var cs=getComputedStyle(colEl);
+    var chrome=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom)+parseFloat(cs.borderTopWidth)+parseFloat(cs.borderBottomWidth);
     var nRows=Math.max(L.length,R.length);
     if(nRows>0){
-      var rh=Math.floor((grid.clientHeight-hdrH-2)/nRows);
-      board.style.setProperty('--tv2rh', Math.max(22,Math.min(46,rh))+'px');
+      var rh=Math.floor((grid.clientHeight-hdrH-chrome-2)/nRows);
+      board.style.setProperty('--tv2rh', Math.max(20,Math.min(52,rh))+'px');
     }
-    if(SCREENS.length>1){
+    if(SCREENS.length>1 && !paused){
       prog.style.transition='none'; prog.style.width='0';
       void prog.offsetWidth;
       prog.style.transition='width '+(DWELL/1000)+'s linear'; prog.style.width='100%';
@@ -385,7 +415,77 @@ export const TV2 = `
   }
   window.addEventListener('resize',fit);
 
-  var idx=0; draw(0);
-  if(SCREENS.length>1) setInterval(function(){ idx=(idx+1)%SCREENS.length; draw(idx); }, DWELL);
+  // ---- rotation timer + on-screen dwell control ----
+  // The dwell can be set three ways, in priority order: ?sec= in the URL, a
+  // button on screen, or the 30s default. A button press is remembered in
+  // localStorage so the TV keeps the choice across the 5-minute page reloads.
+  var STORE='tv2.dwell';
+  if(!Q.get('sec')){
+    try{ var sv=parseInt(localStorage.getItem(STORE)||'',10); if(sv>0) DWELL=sv*1000; }catch(e){}
+  }
+  var idx=0, timer=null, paused=false;
+
+  function schedule(){
+    if(timer){ clearTimeout(timer); timer=null; }
+    if(paused || SCREENS.length<2) return;
+    timer=setTimeout(function(){ go(idx+1); }, DWELL);
+  }
+  function go(i){
+    idx=((i%SCREENS.length)+SCREENS.length)%SCREENS.length;
+    draw(idx);
+    schedule();
+  }
+
+  var CHOICES=[15,30,45,60,120];
+  var ctl=document.createElement('div');
+  ctl.className='tv2ctl';
+  ctl.innerHTML='<span class="lb">ROTATE EVERY</span>'
+    + CHOICES.map(function(v){ return '<button data-sec="'+v+'">'+(v<60?v+'s':(v/60)+'m')+'</button>'; }).join('')
+    + '<button data-act="pause">Pause</button>';
+  document.body.appendChild(ctl);
+
+  function paintCtl(){
+    var secs=Math.round(DWELL/1000);
+    [].forEach.call(ctl.querySelectorAll('button'), function(b){
+      if(b.dataset.act==='pause'){ b.classList.toggle('on', paused); b.textContent = paused ? 'Resume' : 'Pause'; }
+      else b.classList.toggle('on', !paused && +b.dataset.sec===secs);
+    });
+  }
+  ctl.addEventListener('click', function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    e.stopPropagation();
+    if(b.dataset.act==='pause'){ paused=!paused; }
+    else {
+      DWELL=(+b.dataset.sec)*1000; paused=false;
+      try{ localStorage.setItem(STORE, b.dataset.sec); }catch(e2){}
+    }
+    paintCtl();
+    if(paused){ if(timer){clearTimeout(timer);timer=null;} prog.style.transition='none'; prog.style.width='0'; }
+    else draw(idx), schedule();
+    bump();
+  });
+
+  // The control hides itself so the TV shows a clean board; any mouse movement,
+  // tap, or key press brings it back for a few seconds.
+  var hideT=null, over=false;
+  function bump(){
+    ctl.classList.add('show');
+    if(hideT) clearTimeout(hideT);
+    if(over) return;                       // never fade while you are on it
+    hideT=setTimeout(function(){ if(!over) ctl.classList.remove('show'); }, 8000);
+  }
+  ctl.addEventListener('mouseenter', function(){ over=true; if(hideT) clearTimeout(hideT); });
+  ctl.addEventListener('mouseleave', function(){ over=false; bump(); });
+  ['mousemove','touchstart','keydown'].forEach(function(ev){ document.addEventListener(ev, bump, {passive:true}); });
+
+  // Manual paging, for anyone standing at the screen.
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight'||e.key===' ') go(idx+1);
+    else if(e.key==='ArrowLeft') go(idx-1);
+  });
+
+  paintCtl();
+  draw(0);
+  schedule();
 })();
 `;
