@@ -37,6 +37,14 @@ const RETIRE: Record<string, string> = {
   "jeremy rohrer": "2026-08-01",
 };
 
+// House account: reps who are off the desk but whose loans are still in the
+// system. They get no row on the board — no rank, no daily goal, no calls —
+// but every dollar already on their files keeps counting in the team tiles, so
+// removing a rep never silently deletes production from the month. There is no
+// visible "House" row; the money simply stays in the totals up top.
+const HOUSE = new Set(["reese rogers", "jeff laux"]);
+function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
+
 // Daily-goal exemptions (wholesale):
 // GOAL_DASH — kept on the board when they have production, but the TODAY
 //   columns render as dashes and they are excluded from the goal % (numerator
@@ -108,7 +116,7 @@ function counts(ae: string, channel: Channel) {
 }
 
 // Shared roster/name helpers for the reporting engine (lib/report.ts).
-export const roster = { norm, nkey, canon, teamFor, chanFor, counts, retired, isFormer, mdy, TEAMS };
+export const roster = { norm, nkey, canon, teamFor, chanFor, counts, retired, isFormer, isHouse, mdy, TEAMS };
 
 function money(s: string) { const n = parseFloat((s || "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; }
 function mdy(s: string): { m: number; d: number; y: number } | null {
@@ -180,6 +188,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
   const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const HOUSE_AGG: Agg = { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 };
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
   // Aging boundaries (rolling, Arizona). 30 days: soft-pipeline freshness
@@ -225,7 +234,9 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const inPipeAE = inPipe && !AE_PIPE_EXCLUDE.has(st);
 
     if (wh) {
-      const a = A(name);
+      // House reps accumulate into a throwaway bucket: the team-level counters
+      // in these branches still fire, but nothing lands in `ae`, so no row.
+      const a = isHouse(name) ? HOUSE_AGG : A(name);
       if (inPipe) {
         pipeAll += amt;
         if (locked) pipeLocked += amt;
@@ -250,7 +261,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       }
       // Subs = loans OPENED in the reporting month (Opened Date). Correspondent
       // opens are excluded on non-correspondent boards, same as funded.
-      if (od && od.m === lm && od.y === ly && chOk) {
+      if (od && od.m === lm && od.y === ly && chOk && !isHouse(name)) {
         mtd[name] = (mtd[name] || 0) + 1;
         if (od.m === todayM && od.d === todayD && od.y === todayY) {
           today[name] = today[name] || [0, 0, 0];
@@ -264,7 +275,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   // show on the board — with their calls, tickets, and subs — even before they
   // have any funded production. (Runs before the calls/tickets fill below.)
   for (const [, d] of Object.entries(TEAMS)) {
-    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm) && !GOAL_DASH.has(norm(nm))) A(nm);
+    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm) && !isHouse(nm) && !GOAL_DASH.has(norm(nm))) A(nm);
   }
 
   // Call activity → outbound calls + talk minutes per board AE.
@@ -301,7 +312,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     // Team-wide total: every ticket logged today by a rep on this channel
     // (excludes non-roster/system names like "Win Team").
     for (const nm in byNorm) {
-      if (retired(nm)) continue;
+      if (retired(nm) || isHouse(nm)) continue;
       const t = NAME2TEAM[nm];
       if ((t && TEAM2CH[t] === channel) || (channel === "wholesale" && nm in FORMER_TEAM)) tixTotal += byNorm[nm];
     }
