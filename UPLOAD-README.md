@@ -10,6 +10,10 @@ exactly as they are in this zip. Vercel redeploys on push; nothing else to do.
 Do not upload anything else. In particular, leave `board/public/logo.png` alone —
 the copy already on GitHub is the correct OFC tree mark.
 
+After the push, you do not need to touch the TV. The board reloads itself every
+five minutes and the pages are server-rendered on demand, so it picks up the new
+version on its own once Vercel finishes building.
+
 ## Two versions, two URLs
 
 The classic board is unchanged and is still what a plain URL gives you. The
@@ -34,39 +38,47 @@ The control is hidden by default so the TV shows a clean board.
 
        ROTATE EVERY   15s  30s  45s  1m  2m   [ Pause ]
 
-2. Click a speed. It takes effect immediately — the countdown bar restarts at the
-   new length — and the button you picked stays highlighted green.
-3. Stop touching it. Eight seconds later the control fades away on its own. The
-   board keeps rotating at the speed you chose.
+2. Click a speed. It takes effect immediately and the button stays highlighted.
+3. Stop touching it. Eight seconds later it fades away on its own.
 
-The choice is saved on that device, so it survives the board's own five-minute
-reload and a browser restart. Set it once on the TV and it stays until someone
-changes it. Pause holds the current screen until you press Resume. Left and right
-arrow keys page manually without changing the speed.
+The choice is saved on that device and survives the five-minute reload, so you
+set it once on the TV and forget it. Left and right arrow keys page manually.
 
-To lock the speed for everyone and skip the control, put it in the URL instead —
-`?tv=2&sec=45` — which wins over the buttons. `?tv=2&screen=s1` or `&screen=s2`
-freezes on one screen with no rotation.
+To lock the speed for everyone, use `?tv=2&sec=45` instead — the URL wins over
+the buttons. `?tv=2&screen=s1` or `&screen=s2` freezes on one screen.
+
+## The daily goal marker
+
+In the TODAY group, any category an AE has already cleared is printed in bold
+green — 75+ outbound calls, 90+ talk minutes, 3+ tickets, or 1+ submission.
+
+The GOAL column then shows:
+
+    green circled check   at least one of the four categories met
+    gold circled check    all four met in the same day
+    nothing               none met yet
+
+Gold requires a genuine clean sweep of all four. Note that the tickets feed is
+currently landing empty, so the TIX column shows dashes and nobody can reach gold
+until that feed is fixed. If you would rather gold mean "every category we are
+actually measuring today," that is a one-line change in `tv2.ts` — look for
+`all4` in the S1 row builder.
 
 ## Roster changes in board.ts
 
 Three lists near the top of the file control who appears:
 
 **RETIRE** — drops an AE off the board entirely on/after a date, production and
-all. Adam Paniagua was here with 2026-08-01 and has now been removed, so he is
-back on the board with his pipeline and funded production counting again.
+all. Adam Paniagua has been removed from this list, so he is back on the board
+with his pipeline and funded production counting again.
 
-**HOUSE** — Reese Rogers and Jeff Laux. No row on the board, no rank, no daily
-goal, but every dollar on their loans still counts in the tiles at the top, so
-removing a rep never deletes production from the month. There is no visible
-"House" row; the money just lives in the totals.
+**HOUSE** — Reese Rogers and Jeff Laux. No row, no rank, no daily goal, but every
+dollar on their loans still counts in the tiles at the top, so removing a rep
+never deletes production from the month.
 
 **GOAL_DASH** — on the board, but the TODAY columns render as dashes and the AE
-is left out of the daily-goal percentage entirely. Adam Paniagua is on this list,
-which is why his call and talk figures show as dashes.
-
-If you later want Adam's live activity to show while still keeping him out of the
-goal math, move his name from `GOAL_DASH` to `GOAL_EXEMPT` — same exemption, but
-the TODAY numbers stay visible.
+is left out of the daily-goal percentage. Adam Paniagua is on this list, which is
+why his call and talk figures show as dashes. To show his live activity while
+still keeping him out of the goal math, move him to `GOAL_EXEMPT` instead.
 
 All of this affects the classic board as well as the rotating one.

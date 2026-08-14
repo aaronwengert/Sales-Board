@@ -111,9 +111,13 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2v{font-size:17.5px;font-weight:400;color:var(--ink)}
 .tv2v.z{color:#ccd4de}
 .tv2v.b60{color:#b03a2e}
-.tv2hit{color:#127a3c;font-weight:600}
+.tv2hit{color:#127a3c;font-weight:700}
 .tv2dash{color:#ccd4de}
-.tv2chk{font-size:17.5px;font-weight:600;color:#1a9e4e}
+.tv2chk{display:inline-flex;align-items:center;justify-content:center;
+  width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
+  background:#c7ecd5;color:#0b5c2c;box-shadow:inset 0 0 0 1.5px #9bdcb4}
+/* all four categories in one day */
+.tv2chk.gold{background:#f8e08f;color:#6d5205;box-shadow:inset 0 0 0 1.5px #dcbb45}
 .tv2chk.empty{display:none}
 .tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:500;font-size:17.5px}
 .tv2pk.t1{background:#127a3c;color:#fff}
@@ -315,6 +319,7 @@ export const TV2 = `
       var cHit=!isDash&&!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&td[1]>=TALK_GOAL;
       var sHit=!isDash&&td[2]>=SUB_GOAL, xHit=!isDash&&!TIX_PENDING&&tixN>=TIX_GOAL;
       var met=cHit||tHit||sHit||xHit;
+      var all4=cHit&&tHit&&sHit&&xHit;   // clean sweep of the four daily categories
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
       h+='<tr class="tv2row">'
@@ -323,7 +328,7 @@ export const TV2 = `
         +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
         +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
         +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
-        +'<td>'+(isDash?dash:'<span class="tv2chk'+(met?'':' empty')+'">&#10003;</span>')+'</td><td class="sp"></td>'
+        +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">&#10003;</span>')+'</td><td class="sp"></td>'
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
         +'<td><span class="tv2pk '+pk+'">'+mM(pipe)+'</span></td>'
         +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'
