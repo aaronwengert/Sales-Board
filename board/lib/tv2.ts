@@ -21,6 +21,11 @@
 //   ?tv=2                 rotate both screens, 30s each
 //   ?tv=2&sec=20          override dwell time (seconds)
 //   ?tv=2&screen=s1       pin a single screen, no rotation (s1|s2)
+//   ?tv=2&hours=0         ignore the viewing-hours schedule and rotate 24/7
+//
+// Viewing hours: rotation runs Mon-Fri 7:00am-7:00pm Arizona and holds on the
+// first screen outside that, including all weekend. The data still refreshes on
+// its own five-minute cycle, so Monday morning opens on current numbers.
 //
 // On screen there is also a dwell-time control (15s / 30s / 45s / 1m / 2m and
 // Pause) that fades in on any mouse move, tap, or key press and fades back out
@@ -62,6 +67,7 @@ export const TV2_CSS = `
 .tv2dots{display:flex;gap:7px;justify-content:flex-end;margin-top:6px}
 .tv2dots i{width:30px;height:5px;border-radius:3px;background:#d7dee8}
 .tv2dots i.on{background:#2f6f43}
+.tv2sleep{font-size:11.5px;font-weight:600;color:#96a0af;letter-spacing:.3px;white-space:nowrap}
 
 /* ---- KPI band: exactly two tiles, one per section below ---- */
 .tv2band{display:flex;gap:20px;margin-top:12px;flex:0 0 auto}
@@ -116,8 +122,15 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
   background:#c7ecd5;color:#0b5c2c;box-shadow:inset 0 0 0 1.5px #9bdcb4}
-/* all four categories in one day */
-.tv2chk.gold{background:#f8e08f;color:#6d5205;box-shadow:inset 0 0 0 1.5px #dcbb45}
+/* Clean sweep of all four daily categories: a star rather than a check, so it
+   reads as a different thing and not just a different shade, plus a gold rail
+   and wash across the whole row so it carries to the back of the floor. */
+.tv2chk.gold{background:#f2c33d;color:#5c4405;font-size:17px;box-shadow:inset 0 0 0 1.5px #d0a021}
+.tv2row.sweep td{background:#fdf3d4}
+.tv2row.sweep td.rk{box-shadow:inset 4px 0 0 #e0ab24;border-top-left-radius:7px;border-bottom-left-radius:7px}
+.tv2row.sweep td:last-child{border-top-right-radius:7px;border-bottom-right-radius:7px}
+.tv2row.sweep .tv2name{font-weight:700;color:#6d5205}
+.tv2row.sweep .tv2v{color:#4a3a10}
 .tv2chk.empty{display:none}
 .tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:500;font-size:17.5px}
 .tv2pk.t1{background:#127a3c;color:#fff}
@@ -200,6 +213,32 @@ export const TV2 = `
   // elapsed + remaining === total on every day of the month.
   var remaining=total-elapsed+(pastWire?0:1);
   if(remaining<0) remaining=0;
+
+  // ---- viewing hours ----
+  // Nobody is on the floor at 2am on a Sunday, so the board stops rotating
+  // outside Mon-Fri 7:00am-7:00pm Arizona and holds on the first screen. The
+  // five-minute data reload keeps running, so whatever is on screen Monday
+  // morning is current, and a new deploy still lands overnight.
+  var HOURS_ON = Q.get('hours') !== '0';        // ?hours=0 rotates around the clock
+  var VIEW_START = 7, VIEW_END = 19;            // 7:00am to 7:00pm, Arizona
+  function azNow(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Phoenix'})); }
+  function withinViewingHours(){
+    var d=azNow(), day=d.getDay(), h=d.getHours()+d.getMinutes()/60;
+    return day>=1 && day<=5 && h>=VIEW_START && h<VIEW_END;
+  }
+  var DAYNAME=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  function resumeLabel(){
+    var d=azNow(), h=d.getHours()+d.getMinutes()/60;
+    for(var i=0;i<8;i++){
+      var c=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i);
+      var day=c.getDay();
+      if(day<1||day>5) continue;                       // weekends never open
+      if(i===0 && h>=VIEW_END) continue;               // today is already over
+      var when = i===0 ? 'today' : i===1 ? 'tomorrow' : DAYNAME[day];
+      return 'resumes '+when+' 7:00 AM';
+    }
+    return '';
+  }
 
   // ---- CD / rescission deadlines (same table and rules as the desktop board) ----
   var DEADLINES={
@@ -322,13 +361,13 @@ export const TV2 = `
       var all4=cHit&&tHit&&sHit&&xHit;   // clean sweep of the four daily categories
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
-      h+='<tr class="tv2row">'
+      h+='<tr class="tv2row'+(all4?' sweep':'')+'">'
         +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
         +'<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
         +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
         +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
         +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
-        +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">&#10003;</span>')+'</td><td class="sp"></td>'
+        +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">'+(all4?'&#9733;':'&#10003;')+'</span>')+'</td><td class="sp"></td>'
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
         +'<td><span class="tv2pk '+pk+'">'+mM(pipe)+'</span></td>'
         +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'
@@ -378,7 +417,10 @@ export const TV2 = `
   function draw(idx){
     var s=SCREENS[idx];
     var L=s.data.slice(0,SPLIT), R=s.data.slice(SPLIT);
-    var dots=SCREENS.map(function(_,j){return '<i class="'+(j===idx?'on':'')+'"></i>';}).join('');
+    var asleep = HOURS_ON && !awake();
+    var dots = asleep
+      ? '<div class="tv2sleep">Rotation paused &middot; '+resumeLabel()+'</div>'
+      : SCREENS.map(function(_,j){return '<i class="'+(j===idx?'on':'')+'"></i>';}).join('');
     var hdr='<div class="tv2hdr">'
       +'<div class="tv2id"><img class="tv2logo" src="/logo.png" alt="Oaktree Funding Corp">'
       +'<div class="tv2brand"><div class="t1">'+(B.title||'Sales Production')+'</div><div class="t2">'+MONTHS[m]+' '+y+'</div></div></div>'
@@ -404,10 +446,12 @@ export const TV2 = `
       var rh=Math.floor((grid.clientHeight-hdrH-chrome-2)/nRows);
       board.style.setProperty('--tv2rh', Math.max(20,Math.min(52,rh))+'px');
     }
-    if(SCREENS.length>1 && !paused){
+    if(SCREENS.length>1 && !paused && awake()){
       prog.style.transition='none'; prog.style.width='0';
       void prog.offsetWidth;
       prog.style.transition='width '+(DWELL/1000)+'s linear'; prog.style.width='100%';
+    } else {
+      prog.style.transition='none'; prog.style.width='0';
     }
     fit();
   }
@@ -428,13 +472,23 @@ export const TV2 = `
   if(!Q.get('sec')){
     try{ var sv=parseInt(localStorage.getItem(STORE)||'',10); if(sv>0) DWELL=sv*1000; }catch(e){}
   }
-  var idx=0, timer=null, paused=false;
+  var idx=0, timer=null, paused=false, forced=false;
+  // awake = inside viewing hours, or someone pressed a speed button just now
+  function awake(){ return !HOURS_ON || forced || withinViewingHours(); }
 
   function schedule(){
     if(timer){ clearTimeout(timer); timer=null; }
-    if(paused || SCREENS.length<2) return;
+    if(paused || SCREENS.length<2 || !awake()) return;
     timer=setTimeout(function(){ go(idx+1); }, DWELL);
   }
+
+  // Checks once a minute so the board starts itself at 7:00am without waiting
+  // for anyone to touch it, and stops itself at 7:00pm.
+  setInterval(function(){
+    var on=awake();
+    if(on && !timer && !paused) draw(idx), schedule();
+    else if(!on && timer) { clearTimeout(timer); timer=null; draw(idx); }
+  }, 60000);
   function go(i){
     idx=((i%SCREENS.length)+SCREENS.length)%SCREENS.length;
     draw(idx);
@@ -461,7 +515,7 @@ export const TV2 = `
     e.stopPropagation();
     if(b.dataset.act==='pause'){ paused=!paused; }
     else {
-      DWELL=(+b.dataset.sec)*1000; paused=false;
+      DWELL=(+b.dataset.sec)*1000; paused=false; forced=true;   // manual override until the next reload
       try{ localStorage.setItem(STORE, b.dataset.sec); }catch(e2){}
     }
     paintCtl();
