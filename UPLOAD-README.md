@@ -1,92 +1,90 @@
-# Sales Board — rotating TV view
+# Sales Board — rotating TV view, out-of-office, roster changes
 
-Three files. Upload them to `aaronwengert/Sales-Board`, keeping the paths
-exactly as they are in this zip. Vercel redeploys on push; nothing else to do.
+Eleven files. Upload them to `aaronwengert/Sales-Board`, keeping the paths
+exactly as they are in this zip. Two of them are in new folders that GitHub will
+create for you as you upload.
 
-    board/lib/tv2.ts        NEW      the rotating view
-    board/lib/BoardView.tsx CHANGED  loads the rotating view alongside the classic one
-    board/lib/board.ts      CHANGED  roster: House account + Adam Paniagua back on
+    board/lib/tv2.ts               NEW      the rotating TV view
+    board/lib/ooo.ts               NEW      out-of-office storage
+    board/lib/ooocss.ts            NEW      out-of-office screen styling
+    board/app/ooo/page.tsx         NEW      the out-of-office screen
+    board/app/ooo/OooEditor.tsx    NEW      the out-of-office form
+    board/app/api/ooo/route.ts     NEW      saves absences
+    board/lib/BoardView.tsx        CHANGED  loads the rotating view
+    board/lib/board.ts             CHANGED  roster + out-of-office handling
+    board/lib/fetch.ts             CHANGED  reads who is out today
+    board/lib/client.ts            CHANGED  out-of-office on the classic board
+    board/lib/css.ts               CHANGED  out-of-office label styling
 
-Do not upload anything else. In particular, leave `board/public/logo.png` alone —
-the copy already on GitHub is the correct OFC tree mark.
+Leave `board/public/logo.png` alone — the copy on GitHub is the correct one.
 
-After the push you do not need to touch the TV. The board reloads itself every
-five minutes and the pages are server-rendered on demand, so it picks up the new
-version on its own once Vercel finishes building.
+## One-time setup for out of office (2 minutes)
 
-## Two versions, two URLs
+The screen needs somewhere to save. It uses Vercel Blob, which needs no schema
+and no server.
 
-    https://<your-board-url>/              classic — everything on one screen
-    https://<your-board-url>/?tv=2         rotating — two screens
+1. Vercel dashboard → your team → **Storage** → **Create** → **Blob**.
+2. Name it anything, e.g. `board-storage`.
+3. Connect it to the **ae-leaderboard** project when prompted.
 
-Same for the other channels: `/retail`, `/retail?tv=2`, `/correspondent`,
-`/correspondent?tv=2`. The classic board is unchanged; the rotating view only
-appears when `?tv=2` is in the address.
+That's it — Vercel injects `BLOB_READ_WRITE_TOKEN` automatically. Redeploy (or
+just push these files) and the screen works.
 
-Telling them apart at a glance: the rotating view has a thin green countdown bar
-across the top and the section name in the top-right corner ("TODAY & PIPELINE"
-or "FUNDED & ON DECK"). The classic board has neither.
+Until the store exists, `/ooo` still opens and shows a yellow banner explaining
+what's missing, and the board runs exactly as it does today.
 
-## Viewing hours
+## Using it
 
-Rotation runs Monday to Friday, 7:00am to 7:00pm Arizona. Outside those hours —
-evenings and all weekend — it holds on the first screen and the header reads
-"Rotation paused · resumes Monday 7:00 AM". It starts itself again at 7:00am
-without anyone touching the TV.
+Managers go to your board URL with `/ooo` on the end:
 
-The five-minute data refresh keeps running while paused, so Monday morning opens
-on current numbers and any deploy pushed over the weekend is already live.
+    https://<your-board-url>/ooo
 
-To ignore the schedule and rotate around the clock, use `?tv=2&hours=0`.
-Pressing a speed button also overrides the schedule until the next reload, so you
-can demo the board in the evening without changing anything.
+It sits behind the same PIN as the board, so no new login. It is built for a
+phone — big tap targets, native date pickers — because the real use is a manager
+tapping this at 6:40am after a text from an AE.
 
-## Setting the rotation speed
+Pick a person from the dropdown (grouped by team, so no typing and no typos),
+pick the first day out, and optionally a last day for a vacation and a short
+note. Leave the last day blank for a single day. The board reflects it within
+five minutes.
 
-The control is hidden by default so the TV shows a clean board.
+The screen shows who is out today and what is scheduled ahead, each with a
+Remove button. Absences expire on their own when the end date passes — nothing
+to clean up. Entries older than 60 days are pruned automatically.
 
-1. Move the mouse, tap the screen, or press any key. The control fades in at the
-   bottom right:
+## What it does on the board
 
-       ROTATE EVERY   15s  30s  45s  1m  2m   [ Pause ]
+For anyone out that day, on both the classic and rotating views:
 
-2. Click a speed. It takes effect immediately and the button stays highlighted.
-3. Stop touching it. Eight seconds later it fades away on its own.
+- the five TODAY cells collapse into one quiet "OUT OF OFFICE" label
+- their name greys out
+- they drop out of the daily-goal percentage entirely, numerator and denominator
 
-The choice is saved on that device and survives the five-minute reload. Left and
-right arrow keys page manually. To lock the speed for everyone, use
-`?tv=2&sec=45` — the URL wins over the buttons. `?tv=2&screen=s1` or `&screen=s2`
-freezes on one screen.
+Their pipeline, funded production and on-deck numbers are untouched — a day off
+does not erase the month's work.
 
-## The daily goal marker
+If storage is unreachable the board falls back to "nobody is out" and behaves
+normally. It cannot break the board.
 
-In the TODAY group, any category an AE has already cleared prints in bold green —
-75+ outbound calls, 90+ talk minutes, 3+ tickets, or 1+ submission.
+## Other sources (optional, for later)
 
-The GOAL column then shows:
+`fetch.ts` checks three sources in order: the Blob store above, then a Google
+Sheet if `OOO_SHEET_ID` is set, then an endpoint if `OOO_URL` is set. The
+endpoint form is there for when the projections app is ready to serve:
 
-    green circled check   at least one of the four met
-    gold star + gold row  all four met in the same day
-    nothing               none met yet
+    { "date": "2026-08-17", "ooo": ["Bryce Welker", "Mari Woods"] }
 
-A clean sweep of all four also puts a gold rail down the left of the row and a
-gold wash across it, so it reads from the back of the floor rather than needing
-someone to spot a single glyph.
+Switching over later means setting `OOO_URL` and removing the Blob store — no
+code changes.
 
-## Roster changes in board.ts
+## Quick reference
 
-Three lists near the top of the file control who appears:
+    /                      classic board
+    /ooo                   out-of-office screen
+    /?tv=2                 rotating view, two screens, 30s each
+    /?tv=2&sec=45          lock the rotation speed
+    /?tv=2&screen=s1       freeze one screen
+    /?tv=2&hours=0         ignore the Mon-Fri 7am-7pm schedule
 
-**RETIRE** — drops an AE off the board entirely on/after a date, production and
-all. Adam Paniagua has been removed from this list, so he is back on the board.
-
-**HOUSE** — Reese Rogers and Jeff Laux. No row, no rank, no daily goal, but every
-dollar on their loans still counts in the tiles at the top, so removing a rep
-never deletes production from the month.
-
-**GOAL_DASH** — on the board, but the TODAY columns render as dashes and the AE
-is left out of the daily-goal percentage. Adam Paniagua is on this list, which is
-why his call and talk figures show as dashes. To show his live activity while
-still keeping him out of the goal math, move him to `GOAL_EXEMPT` instead.
-
-All of this affects the classic board as well as the rotating one.
+Rotation runs Mon-Fri 7:00am-7:00pm Arizona and holds outside those hours.
+Roster lists (RETIRE / HOUSE / GOAL_DASH) live at the top of `board.ts`.

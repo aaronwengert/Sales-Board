@@ -119,6 +119,11 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2v.b60{color:#b03a2e}
 .tv2hit{color:#127a3c;font-weight:700}
 .tv2dash{color:#ccd4de}
+/* Out of office: the five TODAY cells collapse into one quiet label. */
+table.tv2t td.ooo{text-align:center}
+table.tv2t td.ooo span{display:inline-block;padding:2px 12px;border-radius:8px;background:#eef1f6;
+  color:#8b95a6;font-size:12px;font-weight:600;letter-spacing:.9px}
+.tv2row.out .tv2name{color:#98a2b1}
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
   background:#c7ecd5;color:#0b5c2c;box-shadow:inset 0 0 0 1.5px #9bdcb4}
@@ -169,9 +174,12 @@ export const TV2 = `
   var CALLS_PENDING=!!B.callsPending, TIX_PENDING=(B.tixPending===false?false:true);
   var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, TIX_GOAL=3;
   var GOAL=B.goal||100e6, PIPE_GOAL=300e6;
-  var DASH={}, EXEMPT={};
+  var DASH={}, EXEMPT={}, OOO={};
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
+  // Marked out of office today: no daily-goal expectation, and the TODAY cells
+  // say so plainly instead of showing a row of zeros that reads as a bad day.
+  (B.oooAEs||[]).forEach(function(n){OOO[n]=1;EXEMPT[n]=1;});
   var DWELL=(parseInt(Q.get('sec')||'30',10)||30)*1000;
   var PIN=(Q.get('screen')||'').toLowerCase();
 
@@ -268,7 +276,7 @@ export const TV2 = `
   var metCount=0, goalDenom=0, subsToday=0;
   D.forEach(function(r){
     var n=r[0], td=TODAY[n]||[0,0,0], tixN=TIX[n]||0;
-    var isDash=!!DASH[n], isEx=!!EXEMPT[n];
+    var isDash=!!DASH[n]||!!OOO[n], isEx=!!EXEMPT[n];
     if(!isDash) subsToday+=td[2];
     var met=(!isDash)&&((!CALLS_PENDING&&td[0]>=CALLS_GOAL)||(!CALLS_PENDING&&td[1]>=TALK_GOAL)||td[2]>=SUB_GOAL||(!TIX_PENDING&&tixN>=TIX_GOAL));
     if(!isDash&&!isEx){ goalDenom++; if(met) metCount++; }
@@ -354,20 +362,24 @@ export const TV2 = `
       var rank=startRank+i;
       var n=r[0],pipe=r[2],pipeUn=r[9]||0,b60=r[11]||0;
       var td=TODAY[n]||[0,0,0], tixN=TIX[n]||0;
-      var isDash=!!DASH[n];
+      var isOoo=!!OOO[n];
+      var isDash=!!DASH[n]||isOoo;
       var cHit=!isDash&&!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&td[1]>=TALK_GOAL;
       var sHit=!isDash&&td[2]>=SUB_GOAL, xHit=!isDash&&!TIX_PENDING&&tixN>=TIX_GOAL;
       var met=cHit||tHit||sHit||xHit;
       var all4=cHit&&tHit&&sHit&&xHit;   // clean sweep of the four daily categories
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
-      h+='<tr class="tv2row'+(all4?' sweep':'')+'">'
+      var todayCells = isOoo
+        ? '<td colspan="5" class="ooo"><span>OUT OF OFFICE</span></td>'
+        : '<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
+          +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
+          +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
+          +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
+          +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">'+(all4?'&#9733;':'&#10003;')+'</span>')+'</td>';
+      h+='<tr class="tv2row'+(all4?' sweep':'')+(isOoo?' out':'')+'">'
         +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
-        +'<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
-        +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
-        +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
-        +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
-        +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">'+(all4?'&#9733;':'&#10003;')+'</span>')+'</td><td class="sp"></td>'
+        + todayCells + '<td class="sp"></td>'
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
         +'<td><span class="tv2pk '+pk+'">'+mM(pipe)+'</span></td>'
         +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'

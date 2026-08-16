@@ -114,6 +114,19 @@ function counts(ae: string, channel: Channel) {
   return false;
 }
 
+/** Selectable roster for a channel, grouped by team — used by the /ooo screen.
+ *  Retired reps and House-account names are left out, since neither can be
+ *  meaningfully marked out of office. */
+export function rosterByTeam(channel: Channel = "wholesale"): { team: string; aes: string[] }[] {
+  const out: { team: string; aes: string[] }[] = [];
+  for (const [team, d] of Object.entries(TEAMS)) {
+    if (d.channel !== channel) continue;
+    const aes = d.aes.filter((n) => !retired(n) && !isHouse(n)).sort((a, b) => a.localeCompare(b));
+    if (aes.length) out.push({ team, aes });
+  }
+  return out;
+}
+
 // Shared roster/name helpers for the reporting engine (lib/report.ts).
 export const roster = { norm, nkey, canon, teamFor, chanFor, counts, retired, isFormer, isHouse, mdy, TEAMS };
 
@@ -139,6 +152,9 @@ export type BoardData = {
   tixTotal: number;
   dashAEs: string[];
   exemptAEs: string[];
+  /** AEs marked out of office for the current Arizona business day. Sourced
+   *  from the projections app; empty when that feed is absent. */
+  oooAEs: string[];
   callsPending: boolean;
   tixPending: boolean;
   kpi: {
@@ -164,7 +180,7 @@ function extractProd(csv: string): Record<string, string>[] {
   return parsed.data;
 }
 
-export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale", ticketsCsv: string | null = null, tixIsToday: boolean = false): BoardData {
+export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale", ticketsCsv: string | null = null, tixIsToday: boolean = false, oooNames: string[] = []): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = azNow();
@@ -329,6 +345,23 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   }
   rows.sort((x, y) => y[7] - x[7]);
 
+  // Out-of-office names arrive from another system, so they are resolved
+  // through the same normalization the production export goes through. Anyone
+  // who doesn't match a rostered AE on this channel is simply ignored.
+  const oooAEs: string[] = [];
+  {
+    const seen = new Set<string>();
+    for (const raw of oooNames) {
+      const disp = canon(String(raw || "").trim());
+      if (!disp) continue;
+      const k = nkey(disp);
+      if (seen.has(k)) continue;
+      if (!(disp in ae)) continue;          // not on this board — ignore
+      seen.add(k);
+      oooAEs.push(disp);
+    }
+  }
+
   const pipeUnlocked = pipeAll - pipeLocked;
   return {
     rows,
@@ -338,6 +371,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     tixTotal,
     dashAEs: [...GOAL_DASH].map((k) => NAME2DISPLAY[k] || k),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
+    oooAEs,
     callsPending: !callsIsToday,
     tixPending: !(ticketsCsv && tixIsToday),
     kpi: {

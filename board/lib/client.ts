@@ -13,9 +13,12 @@ export const CLIENT = `
   // Daily-goal exemptions: DASH rows show dashes in the TODAY group and are
   // excluded from the goal %; EXEMPT rows keep live TODAY data but are also
   // excluded from the goal % (numerator and denominator).
-  var DASH={}, EXEMPT={};
+  var DASH={}, EXEMPT={}, OOO={};
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
+  // Out of office today: no daily-goal expectation, and the TODAY group says so
+  // rather than showing zeros. Same source and rules as the rotating view.
+  (B.oooAEs||[]).forEach(function(n){OOO[n]=1;DASH[n]=1;EXEMPT[n]=1;});
   // Daily goal is met by: 1+ sub, 3+ tix, 75+ calls, or 90+ min talk.
   // Per reporting month deadlines, keyed "YYYY-MM"; dates as 'YYYY-MM-DD'.
   // CD Deadline comes before Rescission; each drops off once its date passes (AZ).
@@ -102,13 +105,16 @@ export const CLIENT = `
     var tixTxt  =(isDash||TIX_PENDING)?dashTxt:'<span class="tsub'+(xHit?' hit':'')+'">'+tixN+'</span>';
     var subTxt  =isDash?dashTxt:'<span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span>';
     var goalTxt =isDash?dashTxt:(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>');
+    var todayTxt = OOO[n]
+      ? '<td colspan="5" class="oooc"><span class="ooo">OUT OF OFFICE</span></td>'
+      : '<td>'+callsTxt+'</td>'
+        +'<td>'+talkTxt+'</td>'
+        +'<td>'+tixTxt+'</td>'
+        +'<td>'+subTxt+'</td>'
+        +'<td>'+goalTxt+'</td>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
-     +'<td class="l"><span class="aename">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
-     +'<td>'+callsTxt+'</td>'
-     +'<td>'+talkTxt+'</td>'
-     +'<td>'+tixTxt+'</td>'
-     +'<td>'+subTxt+'</td>'
-     +'<td>'+goalTxt+'</td>'+sp
+     +'<td class="l"><span class="aename'+(OOO[n]?' out':'')+'">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
+     + todayTxt + sp
      +'<td><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
      +'<td><span class="mval'+pk+'">'+mM(pipe)+'</span></td>'
      +'<td><span class="mval'+(pipeUn?'':' z')+'">'+mM(pipeUn)+(pipeUn?' <span class="unpct">&middot; '+unPct+'%</span>':'')+'</span></td>'
