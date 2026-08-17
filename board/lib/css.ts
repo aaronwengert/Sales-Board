@@ -14,9 +14,10 @@ export const CSS = `
   .wrap{width:1936px;margin:0 auto;transform-origin:top left}
   .tnum{font-variant-numeric:tabular-nums}
   /* Out of office (both views): the TODAY group collapses to one quiet label. */
-  td.oooc{text-align:center}
-  .ooo{display:inline-block;padding:2px 12px;border-radius:8px;background:#eef1f6;color:#8b95a6;
-    font-size:11.5px;font-weight:700;letter-spacing:.9px}
+  td.oooc{position:relative;overflow:visible}
+  .ooo{position:absolute;left:6px;top:50%;transform:translateY(-50%);
+    padding:2px 12px;border-radius:8px;background:#eef1f6;color:#8b95a6;
+    font-size:11.5px;font-weight:700;letter-spacing:.9px;white-space:nowrap}
   .aename.out{color:#98a2b1}
   .kpiband{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
   .kpiband .card{flex:0 0 auto}

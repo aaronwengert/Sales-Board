@@ -106,7 +106,7 @@ export const CLIENT = `
     var subTxt  =isDash?dashTxt:'<span class="tsub'+(sHit?' hit':'')+'">'+sub+'</span>';
     var goalTxt =isDash?dashTxt:(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>');
     var todayTxt = OOO[n]
-      ? '<td colspan="5" class="oooc"><span class="ooo">OUT OF OFFICE</span></td>'
+      ? '<td class="oooc"><span class="ooo">OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
       : '<td>'+callsTxt+'</td>'
         +'<td>'+talkTxt+'</td>'
         +'<td>'+tixTxt+'</td>'

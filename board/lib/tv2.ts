@@ -119,10 +119,14 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2v.b60{color:#b03a2e}
 .tv2hit{color:#127a3c;font-weight:700}
 .tv2dash{color:#ccd4de}
-/* Out of office: the five TODAY cells collapse into one quiet label. */
-table.tv2t td.ooo{text-align:center}
-table.tv2t td.ooo span{display:inline-block;padding:2px 12px;border-radius:8px;background:#eef1f6;
-  color:#8b95a6;font-size:12px;font-weight:600;letter-spacing:.9px}
+/* Out of office. The label lives in the first TODAY cell and is allowed to
+   overflow across the four empty ones beside it. A colspan would be the obvious
+   way to do this, but under table-layout:fixed the browser gives a spanning cell
+   a single column's width and shunts the rest of the row sideways. */
+table.tv2t td.ooo{position:relative;overflow:visible}
+table.tv2t td.ooo span{position:absolute;left:6px;top:50%;transform:translateY(-50%);
+  padding:3px 14px;border-radius:8px;background:#eef1f6;color:#8b95a6;
+  font-size:12px;font-weight:600;letter-spacing:.9px;white-space:nowrap}
 .tv2row.out .tv2name{color:#98a2b1}
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
@@ -371,7 +375,7 @@ export const TV2 = `
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
       var todayCells = isOoo
-        ? '<td colspan="5" class="ooo"><span>OUT OF OFFICE</span></td>'
+        ? '<td class="ooo"><span>OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
         : '<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
           +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
           +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'

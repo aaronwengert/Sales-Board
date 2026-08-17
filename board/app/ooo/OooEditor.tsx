@@ -25,6 +25,13 @@ export function OooEditor({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  // Roster already arrives grouped by team, so the lookup is free.
+  const teamOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of groups) for (const n of g.aes) m.set(n.toLowerCase(), g.team);
+    return m;
+  }, [groups]);
+
   const outToday = useMemo(
     () => entries.filter((e) => today >= e.start && today <= e.end).sort((a, b) => a.name.localeCompare(b.name)),
     [entries, today],
@@ -62,15 +69,16 @@ export function OooEditor({
     <div className="oo-wrap">
       <div className="oo-head">
         <div>
+          <div className="oo-brand">
+            <img src="/logo.png" alt="" />
+            <span>Oaktree Funding Corporation</span>
+          </div>
           <h1>Out of Office</h1>
           <p className="oo-sub">Anyone marked out is excluded from that day&rsquo;s goal and shows as out on the board.</p>
+          {configured && <p className="oo-conn" title={tokenVar}>&#10003; Connected</p>}
         </div>
         <a className="oo-back" href="/">← Board</a>
       </div>
-
-      {configured && tokenVar && tokenVar !== "BLOB_READ_WRITE_TOKEN" && (
-        <div className="oo-ok">Storage connected via <code>{tokenVar}</code>.</div>
-      )}
 
 
       {!configured && (
@@ -92,6 +100,7 @@ export function OooEditor({
               {outToday.map((e) => (
                 <li key={id(e)}>
                   <span className="oo-name">{e.name}</span>
+                  <span className="oo-team">{teamOf.get(e.name.toLowerCase()) || ""}</span>
                   <span className="oo-span">{spanLabel(e)}{e.note ? ` · ${e.note}` : ""}</span>
                   <button className="oo-x" disabled={busy} onClick={() => send({ action: "remove", id: id(e) })}>Remove</button>
                 </li>
@@ -141,6 +150,7 @@ export function OooEditor({
             {upcoming.map((e) => (
               <li key={id(e)}>
                 <span className="oo-name">{e.name}</span>
+                <span className="oo-team">{teamOf.get(e.name.toLowerCase()) || ""}</span>
                 <span className="oo-span">{spanLabel(e)}{e.note ? ` · ${e.note}` : ""}</span>
                 <button className="oo-x" disabled={busy} onClick={() => send({ action: "remove", id: id(e) })}>Remove</button>
               </li>
