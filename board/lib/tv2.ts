@@ -128,6 +128,18 @@ table.tv2t td.tv2ooo span{position:absolute;top:50%;transform:translate(-50%,-50
   padding:3px 15px;border-radius:8px;background:#eef1f6;color:#7d8798;
   font-size:12.5px;font-weight:600;letter-spacing:.9px;white-space:nowrap}
 .tv2row.out .tv2name{color:#98a2b1}
+/* Permanently not held to the daily goals — a single hairline drawn through the
+   TODAY group, the ledger convention for a line that does not apply. It has to
+   read as a deliberate mark, which four dashes never did: dashes look like data
+   that failed to arrive, and this is data that was never meant to be there. */
+table.tv2t td.tv2na{background:linear-gradient(#d8dfe9,#d8dfe9) center/100% 1.5px no-repeat}
+/* Better still, when we know it: print the role itself. Set as quiet grey caps
+   so it reads as a caption on the row rather than as another value competing
+   with the numbers on either side. Same overflow trick as OUT OF OFFICE. */
+table.tv2t td.tv2role{position:relative;overflow:visible}
+table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-50%);
+  color:#9aa4b2;font-size:11.5px;font-weight:600;letter-spacing:1.1px;
+  text-transform:uppercase;white-space:nowrap}
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
   background:#c7ecd5;color:#0b5c2c;box-shadow:inset 0 0 0 1.5px #9bdcb4}
@@ -178,7 +190,7 @@ export const TV2 = `
   var CALLS_PENDING=!!B.callsPending, TIX_PENDING=(B.tixPending===false?false:true);
   var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, TIX_GOAL=3;
   var GOAL=B.goal||100e6, PIPE_GOAL=300e6;
-  var DASH={}, EXEMPT={}, OOO={};
+  var DASH={}, EXEMPT={}, OOO={}, ROLE=B.roles||{};
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Marked out of office today: no daily-goal expectation, and the TODAY cells
@@ -367,6 +379,7 @@ export const TV2 = `
       var n=r[0],pipe=r[2],pipeUn=r[9]||0,b60=r[11]||0;
       var td=TODAY[n]||[0,0,0], tixN=TIX[n]||0;
       var isOoo=!!OOO[n];
+      var isPerm=!!DASH[n]&&!isOoo;   // permanently exempt, as opposed to out today
       var isDash=!!DASH[n]||isOoo;
       var cHit=!isDash&&!CALLS_PENDING&&td[0]>=CALLS_GOAL, tHit=!isDash&&!CALLS_PENDING&&td[1]>=TALK_GOAL;
       var sHit=!isDash&&td[2]>=SUB_GOAL, xHit=!isDash&&!TIX_PENDING&&tixN>=TIX_GOAL;
@@ -376,6 +389,10 @@ export const TV2 = `
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
       var todayCells = isOoo
         ? '<td class="tv2ooo"><span>OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
+        : (isPerm && ROLE[n])
+        ? '<td class="tv2role"><span>'+ROLE[n]+'</span></td><td></td><td></td><td></td><td></td>'
+        : isPerm
+        ? '<td class="tv2na"></td><td class="tv2na"></td><td class="tv2na"></td><td class="tv2na"></td><td class="tv2na"></td>'
         : '<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
           +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
           +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
@@ -455,7 +472,7 @@ export const TV2 = `
     // rather than computed: the browser does not always hand out exactly the
     // widths the colgroup asks for, so arithmetic on the declared numbers ends
     // up a few pixels off.
-    [].forEach.call(board.querySelectorAll('td.tv2ooo'), function(td){
+    [].forEach.call(board.querySelectorAll('td.tv2ooo, td.tv2role'), function(td){
       var cells=td.parentNode.cells, sp=td.querySelector('span');
       if(!sp || cells.length<8) return;
       var l=cells[3].getBoundingClientRect().left, r=cells[7].getBoundingClientRect().right;

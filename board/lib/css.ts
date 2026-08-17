@@ -19,6 +19,18 @@ export const CSS = `
     padding:2px 12px;border-radius:8px;background:#eef1f6;color:#8b95a6;
     font-size:11.5px;font-weight:700;letter-spacing:.9px;white-space:nowrap}
   .aename.out{color:#98a2b1}
+  /* Permanently not held to the daily goals. One continuous hairline drawn
+     through the TODAY group — the ledger convention for a line that does not
+     apply. Deliberately unlike the OUT OF OFFICE pill above, and unlike a row
+     of dashes, which reads as data that failed to arrive. */
+  td.nac{background:linear-gradient(#d8dfe9,#d8dfe9) center/100% 1.5px no-repeat}
+  /* When the role is known, print it instead of the rule — it answers "why"
+     rather than only saying "not here". Quiet grey caps, so it reads as a
+     caption rather than as a value competing with the numbers beside it. */
+  td.rolec{position:relative;overflow:visible}
+  td.rolec span.role{position:absolute;top:50%;transform:translate(-50%,-50%);
+    color:#9aa4b2;font-size:11px;font-weight:600;letter-spacing:1px;
+    text-transform:uppercase;white-space:nowrap}
   .kpiband{display:flex;gap:8px;margin-bottom:8px;align-items:stretch}
   .kpiband .card{flex:0 0 auto}
   .cluster{flex:0 0 380px;display:flex;flex-direction:column;justify-content:space-between;

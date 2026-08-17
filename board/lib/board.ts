@@ -53,6 +53,18 @@ function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 const GOAL_DASH = new Set(["eric ferguson","adam martin","brian sherrill","matthew cefalo","john giordano","jeremy rohrer","adam paniagua"]);
 const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 
+// Why a GOAL_DASH row is exempt, in the person's own words rather than the
+// board's. The TODAY group prints this instead of the daily numbers, which
+// turns an unexplained gap into a fact about the role. A name left out of this
+// map still renders correctly — it falls back to a plain rule through the
+// group — so adding someone to GOAL_DASH never requires touching this.
+const ROLES: Record<string, string> = {
+  "eric ferguson": "Sales Manager",
+  "matthew cefalo": "Sales Manager",
+  "john giordano": "Sales Manager",
+  "adam paniagua": "Retail",
+};
+
 // Regular ("hard") pipeline, all channels. Loan On-hold was added to the
 // Meridian Link export on 7/30/2026 and counts here like any other live file:
 // it hits the team pipeline tile and the AE pipeline column, and it ages into
@@ -151,6 +163,7 @@ export type BoardData = {
   tix: Record<string, number>;
   tixTotal: number;
   dashAEs: string[];
+  roles: Record<string, string>;
   exemptAEs: string[];
   /** AEs marked out of office for the current Arizona business day. Sourced
    *  from the projections app; empty when that feed is absent. */
@@ -370,6 +383,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     tix,
     tixTotal,
     dashAEs: [...GOAL_DASH].map((k) => NAME2DISPLAY[k] || k),
+    roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [NAME2DISPLAY[k] || k, v])),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
     oooAEs,
     callsPending: !callsIsToday,

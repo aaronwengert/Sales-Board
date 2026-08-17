@@ -13,8 +13,11 @@ export const CLIENT = `
   // Daily-goal exemptions: DASH rows show dashes in the TODAY group and are
   // excluded from the goal %; EXEMPT rows keep live TODAY data but are also
   // excluded from the goal % (numerator and denominator).
-  var DASH={}, EXEMPT={}, OOO={};
-  (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
+  // PERM is the permanent exemption — captured before the OOO names are folded
+  // into DASH below, because the two must not look the same on screen. An
+  // absence is about today; this is about the role, every day of the year.
+  var DASH={}, EXEMPT={}, OOO={}, PERM={}, ROLE=B.roles||{};
+  (B.dashAEs||[]).forEach(function(n){DASH[n]=1;PERM[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Out of office today: no daily-goal expectation, and the TODAY group says so
   // rather than showing zeros. Same source and rules as the rotating view.
@@ -107,6 +110,10 @@ export const CLIENT = `
     var goalTxt =isDash?dashTxt:(met?'<span class="chk">&#10003;</span>':'<span class="chk empty">&#10003;</span>');
     var todayTxt = OOO[n]
       ? '<td class="oooc"><span class="ooo" style="left:188px">OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
+      : (PERM[n] && ROLE[n])
+      ? '<td class="rolec"><span class="role" style="left:188px">'+ROLE[n]+'</span></td><td></td><td></td><td></td><td></td>'
+      : PERM[n]
+      ? '<td class="nac"></td><td class="nac"></td><td class="nac"></td><td class="nac"></td><td class="nac"></td>'
       : '<td>'+callsTxt+'</td>'
         +'<td>'+talkTxt+'</td>'
         +'<td>'+tixTxt+'</td>'
