@@ -1,19 +1,24 @@
 {
   "name": "ae-leaderboard",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
-    "next": "14.2.35",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "@vercel/blob": "^2.8.0",
     "googleapis": "^140.0.1",
-    "papaparse": "^5.4.1"
+    "next": "14.2.35",
+    "papaparse": "^5.4.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "typescript": "5.5.3",
     "@types/node": "20.14.10",
+    "@types/papaparse": "^5.3.14",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
-    "@types/papaparse": "^5.3.14"
+    "typescript": "5.5.3"
   }
 }

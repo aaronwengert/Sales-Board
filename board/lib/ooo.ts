@@ -1,12 +1,15 @@
 // Out-of-office store.
 //
-// One small JSON document holding every absence anyone has entered. It lives in
-// Vercel Blob, which needs no schema and no server: create a Blob store in the
-// Vercel dashboard, link it to this project, and Vercel injects
-// BLOB_READ_WRITE_TOKEN automatically. Nothing else to configure.
+// One small JSON document holding every absence anyone has entered, kept in a
+// PRIVATE Vercel Blob store. Setup is a Blob store created in the Vercel
+// dashboard and connected to this project; Vercel then injects
+// BLOB_READ_WRITE_TOKEN on its own. There is nothing else to configure and no
+// schema to maintain.
 //
 // Every read and write is wrapped so a storage problem can never take the board
 // down — a failure resolves to "nobody is out", which is the safe default.
+
+import { put, get } from "@vercel/blob";
 
 export type OOOEntry = {
   name: string;          // AE display name, spelled as the roster spells it
@@ -17,62 +20,37 @@ export type OOOEntry = {
   at?: string;           // ISO timestamp of when it was entered
 };
 
-const TOKEN = process.env.BLOB_READ_WRITE_TOKEN || "";
 const PATHNAME = "board/ooo.json";
-const API = "https://blob.vercel-storage.com";
 
-export function storeConfigured() { return Boolean(TOKEN); }
+export function storeConfigured() { return Boolean(process.env.BLOB_READ_WRITE_TOKEN); }
 
-/** Resolved public URL of the blob, cached per lambda to save a round trip. */
-let cachedUrl = "";
-
-async function resolveUrl(): Promise<string> {
-  if (cachedUrl) return cachedUrl;
-  const res = await fetch(`${API}/?prefix=${encodeURIComponent(PATHNAME)}&limit=1`, {
-    headers: { authorization: `Bearer ${TOKEN}`, "x-api-version": "7" },
-    cache: "no-store",
-  });
-  if (!res.ok) return "";
-  const j: any = await res.json();
-  cachedUrl = j?.blobs?.[0]?.url || "";
-  return cachedUrl;
-}
-
-/** Every stored entry, newest first. Returns [] if the store is empty or down. */
+/** Every stored entry. Returns [] if the store is empty, unset, or unreachable. */
 export async function readEntries(): Promise<OOOEntry[]> {
-  if (!TOKEN) return [];
+  if (!storeConfigured()) return [];
   try {
-    const url = await resolveUrl();
-    if (!url) return [];
-    // Cache-buster: the blob CDN would otherwise serve a stale copy for a while,
-    // and an absence entered this morning needs to land on the next refresh.
-    const res = await fetch(`${url}?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return [];
-    const j: any = await res.json();
+    // useCache:false — an absence entered this morning has to be visible on the
+    // board's very next refresh, not after a CDN TTL.
+    const res = await get(PATHNAME, { access: "private", useCache: false });
+    if (!res?.stream) return [];
+    const text = await new Response(res.stream as any).text();
+    const j = JSON.parse(text);
     return Array.isArray(j) ? j.filter(valid) : [];
   } catch {
-    return [];
+    return [];                       // includes "not found" on a fresh store
   }
 }
 
 /** Replace the whole document. Returns false if the write did not land. */
 export async function writeEntries(entries: OOOEntry[]): Promise<boolean> {
-  if (!TOKEN) return false;
+  if (!storeConfigured()) return false;
   try {
-    const res = await fetch(`${API}/${PATHNAME}`, {
-      method: "PUT",
-      headers: {
-        authorization: `Bearer ${TOKEN}`,
-        "x-api-version": "7",
-        "x-content-type": "application/json",
-        "x-add-random-suffix": "0",
-        "x-cache-control-max-age": "0",
-      },
-      body: JSON.stringify(entries.filter(valid)),
+    await put(PATHNAME, JSON.stringify(entries.filter(valid)), {
+      access: "private",
+      contentType: "application/json",
+      addRandomSuffix: false,        // stable path, so reads know where to look
+      allowOverwrite: true,          // this document is meant to be replaced
+      cacheControlMaxAge: 0,
     });
-    if (!res.ok) return false;
-    const j: any = await res.json();
-    if (j?.url) cachedUrl = j.url;
     return true;
   } catch {
     return false;
