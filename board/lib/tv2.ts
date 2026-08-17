@@ -123,10 +123,10 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
    overflow across the four empty ones beside it. A colspan would be the obvious
    way to do this, but under table-layout:fixed the browser gives a spanning cell
    a single column's width and shunts the rest of the row sideways. */
-table.tv2t td.ooo{position:relative;overflow:visible}
-table.tv2t td.ooo span{position:absolute;left:6px;top:50%;transform:translateY(-50%);
-  padding:3px 14px;border-radius:8px;background:#eef1f6;color:#8b95a6;
-  font-size:12px;font-weight:600;letter-spacing:.9px;white-space:nowrap}
+table.tv2t td.tv2ooo{position:relative;overflow:visible}
+table.tv2t td.tv2ooo span{position:absolute;top:50%;transform:translate(-50%,-50%);
+  padding:3px 15px;border-radius:8px;background:#eef1f6;color:#7d8798;
+  font-size:12.5px;font-weight:600;letter-spacing:.9px;white-space:nowrap}
 .tv2row.out .tv2name{color:#98a2b1}
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
@@ -375,7 +375,7 @@ export const TV2 = `
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
       var todayCells = isOoo
-        ? '<td class="ooo"><span>OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
+        ? '<td class="tv2ooo"><span>OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
         : '<td><span class="tv2v'+(cHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:td[0])+'</span></td>'
           +'<td><span class="tv2v'+(tHit?' tv2hit':'')+'">'+((isDash||CALLS_PENDING)?dash:Math.round(td[1]))+'</span></td>'
           +'<td><span class="tv2v'+(xHit?' tv2hit':'')+'">'+((isDash||TIX_PENDING)?dash:tixN)+'</span></td>'
@@ -450,6 +450,17 @@ export const TV2 = `
       + '<div class="tv2band">'+s.band()+'</div>'
       + '<div class="tv2grid"><div class="tv2col">'+s.col(L,1)+'</div><div class="tv2col">'+s.col(R,SPLIT+1)+'</div></div>'
       + (s.legend ? LEGEND : '');
+
+    // Centre each OUT OF OFFICE label across the five TODAY cells. Measured
+    // rather than computed: the browser does not always hand out exactly the
+    // widths the colgroup asks for, so arithmetic on the declared numbers ends
+    // up a few pixels off.
+    [].forEach.call(board.querySelectorAll('td.tv2ooo'), function(td){
+      var cells=td.parentNode.cells, sp=td.querySelector('span');
+      if(!sp || cells.length<8) return;
+      var l=cells[3].getBoundingClientRect().left, r=cells[7].getBoundingClientRect().right;
+      sp.style.left=((l+r)/2 - td.getBoundingClientRect().left)+'px';
+    });
 
     // size rows to exactly fill the space left under the tiles
     var grid=board.querySelector('.tv2grid'), colEl=grid.querySelector('.tv2col'), tb=colEl.querySelector('table.tv2t');

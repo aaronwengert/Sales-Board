@@ -1,35 +1,26 @@
-# Fix for the broken OOO row, plus the OOO screen tweaks
+# OUT OF OFFICE label — centred, and the grey block removed
 
-Five files:
+Three files:
 
-    board/lib/tv2.ts             fixes the overlapping row on the rotating board
-    board/lib/client.ts          same fix on the classic board
-    board/lib/css.ts             styling for that label
-    board/lib/ooocss.ts          team chip, company mark, Helvetica Neue pickers
-    board/app/ooo/OooEditor.tsx  team beside each name, company mark, small check
+    board/lib/tv2.ts      centres the label; renames its cell class
+    board/lib/css.ts      scopes the classic board's rule so it stops leaking
+    board/lib/client.ts   matching change on the classic board
 
-## The board bug
+## Two things were wrong
 
-The OUT OF OFFICE label used a table cell with `colspan="5"` to span the TODAY
-group. Under `table-layout: fixed` the browser gave that cell a single column's
-width — 89px instead of the 228px it should have spanned — and pushed every
-cell after it out of position, which is why the pipeline and unlocked figures
-printed on top of each other.
+**Off to the left.** The label was pinned 6px from the left of the first TODAY
+cell rather than centred across the group. It is now positioned from measured
+geometry after the table renders, not from arithmetic on the declared column
+widths — the browser does not always hand out exactly the widths the colgroup
+asks for, and computing it landed 14px off. Measured, it is exact.
 
-The label now lives in the first TODAY cell and is absolutely positioned, so it
-paints across the four empty cells beside it without taking part in the column
-math. Verified by measuring: an out-of-office row now reports exactly the same
-thirteen column widths as a normal row.
+**The grey block beside it.** The classic board's stylesheet defined a bare
+`.ooo` class with a grey background. Both stylesheets load on the same page, so
+that rule was also matching the rotating view's cell and painting it grey — the
+empty block sitting to the left of the pill. The classic rule is now scoped to
+`td.oooc span.ooo`, and the rotating view's cell was renamed to `tv2ooo` so the
+two can never collide again.
 
-## OOO screen
-
-- Team name shown beside each person, in both "Out today" and "Scheduled"
-- Oaktree Funding Corporation, with the logo, above the heading
-- The big green "connected" bar is gone; there is now a small green
-  "✓ Connected" line under the subtitle. Hovering it names the auth mechanism.
-- The person picker and both date fields now use Helvetica Neue
-
-One note on the font: Helvetica Neue ships on Macs and iPhones. Windows and
-Android don't have it, so those fall back to Helvetica then Arial, which is the
-closest match available. If you want it identical everywhere it would need to be
-loaded as a webfont, which is a separate change.
+Verified after the change: the label sits dead centre on the TODAY group (0px
+off), stays inside it, the cell's background is transparent, and an
+out-of-office row reports the same thirteen column widths as a normal row.

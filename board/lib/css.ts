@@ -15,7 +15,7 @@ export const CSS = `
   .tnum{font-variant-numeric:tabular-nums}
   /* Out of office (both views): the TODAY group collapses to one quiet label. */
   td.oooc{position:relative;overflow:visible}
-  .ooo{position:absolute;left:6px;top:50%;transform:translateY(-50%);
+  td.oooc span.ooo{position:absolute;top:50%;transform:translate(-50%,-50%);
     padding:2px 12px;border-radius:8px;background:#eef1f6;color:#8b95a6;
     font-size:11.5px;font-weight:700;letter-spacing:.9px;white-space:nowrap}
   .aename.out{color:#98a2b1}
