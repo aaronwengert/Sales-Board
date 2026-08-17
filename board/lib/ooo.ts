@@ -22,15 +22,60 @@ export type OOOEntry = {
 
 const PATHNAME = "board/ooo.json";
 
-export function storeConfigured() { return Boolean(process.env.BLOB_READ_WRITE_TOKEN); }
+/**
+ * Work out how to authenticate to the Blob store.
+ *
+ * Vercel connects Blob stores two different ways, and which one you get depends
+ * on when and how the store was created:
+ *
+ *   1. Static token — sets BLOB_READ_WRITE_TOKEN (or a prefixed variant such as
+ *      SALES_BOARD_OOO_BLOB_READ_WRITE_TOKEN when the account has several stores).
+ *   2. OIDC — sets BLOB_STORE_ID, and the runtime injects a short-lived
+ *      VERCEL_OIDC_TOKEN on every invocation. That token deliberately does NOT
+ *      appear in the Environment Variables list, because it rotates.
+ *
+ * The SDK reads VERCEL_OIDC_TOKEN by itself, so for the OIDC path all we have to
+ * do is pass the store id and stay out of the way.
+ */
+type BlobAuth = { token: string } | { storeId: string };
+
+function staticToken(): string {
+  const direct = process.env.BLOB_READ_WRITE_TOKEN;
+  if (direct) return direct;
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v && k.endsWith("BLOB_READ_WRITE_TOKEN")) return v;
+  }
+  return "";
+}
+
+function blobAuth(): BlobAuth | null {
+  const token = staticToken();
+  if (token) return { token };
+  const storeId = process.env.BLOB_STORE_ID;
+  if (storeId) return { storeId };
+  return null;
+}
+
+export function storeConfigured() { return blobAuth() !== null; }
+
+/** Which mechanism is in play — shown on /ooo so setup problems are self-evident. */
+export function authMode(): string {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return "BLOB_READ_WRITE_TOKEN";
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v && k.endsWith("BLOB_READ_WRITE_TOKEN")) return k;
+  }
+  if (process.env.BLOB_STORE_ID) return "OIDC + BLOB_STORE_ID";
+  return "";
+}
 
 /** Every stored entry. Returns [] if the store is empty, unset, or unreachable. */
 export async function readEntries(): Promise<OOOEntry[]> {
-  if (!storeConfigured()) return [];
+  const auth = blobAuth();
+  if (!auth) return [];
   try {
     // useCache:false — an absence entered this morning has to be visible on the
     // board's very next refresh, not after a CDN TTL.
-    const res = await get(PATHNAME, { access: "private", useCache: false });
+    const res = await get(PATHNAME, { access: "private", useCache: false, ...auth });
     if (!res?.stream) return [];
     const text = await new Response(res.stream as any).text();
     const j = JSON.parse(text);
@@ -42,10 +87,12 @@ export async function readEntries(): Promise<OOOEntry[]> {
 
 /** Replace the whole document. Returns false if the write did not land. */
 export async function writeEntries(entries: OOOEntry[]): Promise<boolean> {
-  if (!storeConfigured()) return false;
+  const auth = blobAuth();
+  if (!auth) return false;
   try {
     await put(PATHNAME, JSON.stringify(entries.filter(valid)), {
       access: "private",
+      ...auth,
       contentType: "application/json",
       addRandomSuffix: false,        // stable path, so reads know where to look
       allowOverwrite: true,          // this document is meant to be replaced

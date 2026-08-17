@@ -14,6 +14,11 @@ body{margin:0;background:var(--page);color:var(--ink);
   border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;margin-top:2px}
 .oo-warn{background:#fdf3d4;border:1px solid #ecd88f;color:#6d5205;border-radius:12px;
   padding:12px 14px;font-size:14px;line-height:1.45;margin-bottom:16px}
+.oo-ok{background:#eaf6ee;border:1px solid #bfe3cb;color:#1b5c33;border-radius:12px;
+  padding:10px 14px;font-size:13.5px;margin-bottom:16px}
+.oo-ok code{font-size:12.5px;background:#d8eede;padding:1px 6px;border-radius:5px}
+.oo-warn strong{font-weight:700}
+.oo-warn code{font-size:12.5px;background:#f7ecc4;padding:1px 6px;border-radius:5px}
 .oo-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
 .oo-card h2{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
 .oo-empty{font-size:15px;color:var(--muted);margin:0}

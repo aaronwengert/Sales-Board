@@ -1,4 +1,4 @@
-import { readEntries, azToday, storeConfigured } from "@/lib/ooo";
+import { readEntries, azToday, storeConfigured, authMode } from "@/lib/ooo";
 import { rosterByTeam } from "@/lib/board";
 import { OooEditor } from "./OooEditor";
 import { OOO_CSS } from "@/lib/ooocss";
@@ -12,7 +12,7 @@ export default async function Page() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: OOO_CSS }} />
-      <OooEditor initial={entries} groups={groups} today={azToday()} configured={storeConfigured()} />
+      <OooEditor initial={entries} groups={groups} today={azToday()} configured={storeConfigured()} tokenVar={authMode()} />
     </>
   );
 }

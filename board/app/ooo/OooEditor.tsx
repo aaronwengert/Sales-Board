@@ -15,8 +15,8 @@ function spanLabel(e: OOOEntry) {
 }
 
 export function OooEditor({
-  initial, groups, today, configured,
-}: { initial: OOOEntry[]; groups: Group[]; today: string; configured: boolean }) {
+  initial, groups, today, configured, tokenVar,
+}: { initial: OOOEntry[]; groups: Group[]; today: string; configured: boolean; tokenVar?: string }) {
   const [entries, setEntries] = useState<OOOEntry[]>(initial);
   const [name, setName] = useState("");
   const [start, setStart] = useState(today);
@@ -68,10 +68,18 @@ export function OooEditor({
         <a className="oo-back" href="/">← Board</a>
       </div>
 
+      {configured && tokenVar && tokenVar !== "BLOB_READ_WRITE_TOKEN" && (
+        <div className="oo-ok">Storage connected via <code>{tokenVar}</code>.</div>
+      )}
+
+
       {!configured && (
         <div className="oo-warn">
-          No storage connected yet. In Vercel, create a Blob store and link it to this project —
-          the board keeps running normally in the meantime, it just can&rsquo;t save absences.
+          <strong>No Blob store visible to this deployment.</strong> Expected either a
+          <code>BLOB_READ_WRITE_TOKEN</code> or a <code>BLOB_STORE_ID</code> and found neither.
+          If the store is already connected in Vercel, the fix is a <strong>redeploy</strong> —
+          environment variables are only handed to deployments built after the store was linked.
+          The board keeps running normally in the meantime; it just can&rsquo;t save absences.
         </div>
       )}
 
