@@ -198,6 +198,7 @@ export const CSS = `
   .mroot .st .bar>i{display:block;height:100%;background:var(--green)}
   .mroot .mc-f{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
   .mroot .chip{font-size:10.5px;color:#5c6a7a;background:#f2f5f9;border-radius:20px;padding:3px 9px;font-weight:600}
+  .mroot .chip.out{color:#8b95a6;background:#eef1f6;font-weight:700;letter-spacing:.3px}
   .mroot .chip .hit{color:var(--green-ink)}
   .mroot .banner{background:#fff7e6;border:1px solid #f0dca6;color:#8a6d1e;border-radius:12px;padding:14px 16px;font-size:14px;margin-top:8px}
   .mroot .mdl{margin-top:9px;font-size:12px;font-weight:700;color:var(--ink2);line-height:1.4}

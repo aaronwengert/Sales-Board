@@ -221,7 +221,11 @@ export const CLIENT = `
         +'</div>'
         +'<div class="mc-f"><span class="chip">MTD subs &middot; '+(MTD_SUBS[n]||0)+'</span>'
         +'<span class="chip">Tix &middot; '+((isDash||TIX_PENDING)?'&ndash;':(xHit?'<b class="hit">'+(TIX_TODAY[n]||0)+'</b>':(TIX_TODAY[n]||0)))+'</span>'
-        +'<span class="chip">'+(isDash?'&ndash; goal n/a':(met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today'))+'</span>'
+        +'<span class="chip'+(OOO[n]?' out':'')+'">'+(
+            OOO[n] ? 'Out of office'
+          : (PERM[n]&&ROLE[n]) ? ROLE[n]
+          : isDash ? 'Not scored'
+          : (met?'<b class="hit">&#10003; hit today</b>':'&#9675; not yet today'))+'</span>'
         +'<span class="chip">Avg '+mK(avg)+'</span></div></div>';
     });
     mr.innerHTML = hdr + tiles + '<div class="seclabel">AE PRODUCTION &middot; '+D.length+' REPS</div>' + cards;
@@ -244,6 +248,16 @@ export const CLIENT = `
   window.addEventListener('load', fitBoard);
   fitBoard();
 
-  setTimeout(function(){location.reload();}, 300000); // refresh every 5 min
+  // Refresh every 5 minutes. On a TV that is free — nobody is mid-anything. On a
+  // phone a reload throws away your scroll position while you are reading, so
+  // there we wait until the page is in the background and refresh then; you come
+  // back to current numbers instead of losing your place.
+  (function(){
+    function due(){
+      if(window.innerWidth<=900 && !document.hidden){ setTimeout(due, 20000); return; }
+      location.reload();
+    }
+    setTimeout(due, 300000);
+  })();
 })();
 `;

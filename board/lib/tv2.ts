@@ -167,6 +167,85 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
   font-size:11.5px;font-weight:500;color:var(--muted)}
 .tv2lgd i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle}
 
+/* ---- phone view (<=900px): tabs, scroll, no auto-advance ----
+   A separate layout rather than a squeezed one. The TV board is 1920px wide and
+   scaling it to a phone renders it at about a fifth size, which is unreadable —
+   so below this width none of that markup is built at all. */
+#tv2m{max-width:520px;margin:0 auto;padding:10px 10px 28px;color:var(--ink)}
+.m2hdr{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);
+  border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.m2logo{height:26px;width:36px;object-fit:contain;flex:0 0 auto;display:block;mix-blend-mode:multiply;font-size:0}
+.m2t1{font-size:14px;font-weight:800;letter-spacing:-.2px;line-height:1.15}
+.m2t2{font-size:10.5px;color:var(--muted);margin-top:1px}
+/* The tabs stay put, so you can change section from anywhere in the list. */
+.m2tabs{display:flex;gap:5px;margin-bottom:9px;position:sticky;top:0;z-index:3;
+  padding:8px 0;background:var(--page)}
+/* The rows scroll under the tab bar, so it needs an opaque body and a short
+   fade beneath it — otherwise a half-row shows through the gap. */
+.m2tabs::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px;
+  background:linear-gradient(var(--page),rgba(233,237,243,0));pointer-events:none}
+.m2tabs button{flex:1 1 0;font:700 9.5px/1 inherit;letter-spacing:.4px;color:#7d8798;
+  background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 0;cursor:pointer}
+.m2tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.m2tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 11px 10px;
+  margin-bottom:9px;position:relative;overflow:hidden}
+.m2tile::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac)}
+.m2tl{font-size:9.5px;font-weight:700;letter-spacing:.9px;color:var(--muted)}
+.m2tb{font-size:27px;font-weight:800;letter-spacing:-.8px;line-height:1.05;margin-top:2px;color:var(--ac)}
+.m2bar{height:5px;border-radius:4px;background:#e6ebf2;margin-top:7px;overflow:hidden}
+.m2bar i{display:block;height:100%;background:var(--ac);border-radius:4px}
+.m2ts{font-size:10.5px;color:var(--muted);margin-top:6px}
+.m2sec{display:flex;align-items:baseline;justify-content:space-between;padding:2px 2px 5px}
+.m2sn{font-size:11px;font-weight:700;letter-spacing:1.1px;color:var(--ac);white-space:nowrap;flex:0 0 auto;
+  border-bottom:2.5px solid var(--ac);padding-bottom:4px}
+.m2sx{font-size:9px;white-space:nowrap;font-weight:600;letter-spacing:.5px;color:#a3adbb;text-align:right;padding-left:10px}
+.m2red{color:#b03a2e;font-weight:700}
+.m2hd{display:flex;align-items:center;padding:6px 8px 4px;font-size:8.5px;font-weight:700;
+  letter-spacing:.5px;color:#98a2b1}
+.m2hd i{flex:0 0 20px}
+.m2hd b{flex:1 1 auto}
+.m2hd u{text-decoration:none;text-align:right}
+.m2hd.today u{flex:0 0 38px}
+.m2hd.pipe u:nth-of-type(1){flex:0 0 40px;padding-right:8px}
+.m2hd.pipe u:nth-of-type(2){flex:0 0 78px}
+.m2hd.pipe u:nth-of-type(3){flex:0 0 62px}
+.m2hd.funded u:nth-of-type(1){flex:0 0 30px}
+.m2hd.funded u:nth-of-type(2){flex:0 0 96px;padding-right:8px}
+.m2hd.funded u:nth-of-type(3){flex:0 0 52px}
+.m2hd.deck u:nth-of-type(1){flex:0 0 30px}
+.m2hd.deck u:nth-of-type(2){flex:0 0 62px}
+.m2hd.deck u:nth-of-type(3){flex:0 0 62px}
+.m2list{background:#fff;border:1px solid var(--line);border-radius:12px;padding:2px 8px}
+.m2r{display:flex;align-items:center;height:38px;border-bottom:1px solid #f1f4f8;
+  font-variant-numeric:tabular-nums}
+.m2r:last-child{border-bottom:none}
+.m2r i{flex:0 0 20px;font-style:normal;font-size:10.5px;color:#bcc5d1;text-align:right;padding-right:7px}
+.m2r b{flex:1 1 auto;min-width:0;font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding-right:5px}
+.m2r u{text-decoration:none;flex:0 0 38px;text-align:right;font-size:13.5px;font-weight:400}
+.m2r u.g{color:var(--green-ink);font-weight:700}
+.m2r u.w30{flex:0 0 30px}.m2r u.w40{flex:0 0 40px;padding-right:8px}.m2r u.w52{flex:0 0 52px}.m2r u.w62{flex:0 0 62px}
+.m2r u.m2tot{font-weight:600}
+.m2z{color:#ccd4de}
+.m2r s{flex:0 0 28px;text-decoration:none;text-align:right;font-size:0}
+.m2r s.on::before,.m2r s.gold::before{display:inline-flex;align-items:center;justify-content:center;
+  width:21px;height:21px;border-radius:50%;font-size:13px;font-weight:700}
+.m2r s.on::before{content:"✓";background:#c7ecd5;color:#0b5c2c;box-shadow:inset 0 0 0 1.2px #9bdcb4}
+.m2r s.gold::before{content:"★";background:#f2c33d;color:#5c4405;font-size:12px;box-shadow:inset 0 0 0 1.2px #d0a021}
+.m2r.out b{color:#98a2b1}
+.m2wide{flex:1 1 auto;text-align:center;font-style:normal;font-size:9.5px;font-weight:700;
+  letter-spacing:.9px;color:var(--muted);background:#eef1f6;border-radius:7px;padding:3px 0;margin-right:2px}
+.m2wide.m2role{background:transparent;color:#9aa4b2;font-weight:600}
+.m2pk{flex:0 0 78px;text-align:center;font-size:13px;font-weight:500;padding:2px 0;border-radius:7px}
+.m2pk.t1{background:#127a3c;color:#fff}
+.m2pk.t2{background:#dcf3e4;color:#116b36}
+.m2pk.t3{background:#fbf2c9;color:#836607}
+.m2pk.t4{background:#fbdedb;color:#9c352f}
+.m2f{flex:0 0 96px;display:flex;align-items:center;gap:6px;justify-content:flex-end;padding-right:8px}
+.m2g5{width:22px;height:5px;border-radius:4px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
+.m2g5 i{display:block;height:100%}
+.m2foot{font-size:10px;color:var(--muted);text-align:center;padding:11px 0 0}
+
 /* ---- dwell-time control (fades in on mouse move / tap) ---- */
 .tv2ctl{position:fixed;right:18px;bottom:16px;z-index:60;display:flex;align-items:center;gap:7px;
   background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:11px;padding:7px 9px;
@@ -198,6 +277,14 @@ export const TV2 = `
   (B.oooAEs||[]).forEach(function(n){OOO[n]=1;EXEMPT[n]=1;});
   var DWELL=(parseInt(Q.get('sec')||'30',10)||30)*1000;
   var PIN=(Q.get('screen')||'').toLowerCase();
+  // A phone is not a small television. Below this width the rotating board
+  // becomes a tabbed, scrollable view: one section at a time, chosen by the
+  // person holding it, and nothing moves on its own while they are reading.
+  //
+  // 900px rather than the 768px the classic board uses for its own mobile
+  // switch: a phone held sideways is 844 wide, and scaling a 1920px board into
+  // that is just as unreadable as scaling it into 390.
+  var PHONE = !!(window.matchMedia && matchMedia('(max-width:900px)').matches);
 
   function mM(v){ if(!v) return '$0'; return '$'+(v/1e6).toFixed(2)+'M'; }
   function mK(v){ if(!v) return '$0'; return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : '$'+Math.round(v/1000)+'K'; }
@@ -213,10 +300,13 @@ export const TV2 = `
   var fh=document.getElementById('fithost'); if(fh) fh.classList.add('tv2hide');
   var mr=document.getElementById('mroot'); if(mr) mr.classList.add('tv2hide');
 
-  var host=document.createElement('div'); host.id='tv2host';
-  host.innerHTML='<i class="tv2track"></i><i class="tv2prog" id="tv2prog"></i><div id="tv2board"></div>';
-  document.body.appendChild(host);
-  var board=document.getElementById('tv2board'), prog=document.getElementById('tv2prog');
+  var board=null, prog=null;
+  if(!PHONE){
+    var host=document.createElement('div'); host.id='tv2host';
+    host.innerHTML='<i class="tv2track"></i><i class="tv2prog" id="tv2prog"></i><div id="tv2board"></div>';
+    document.body.appendChild(host);
+    board=document.getElementById('tv2board'); prog=document.getElementById('tv2prog');
+  }
 
   // Two independent sort orders — each screen is ranked by the thing it shows.
   var BY_PIPE = D.slice().sort(function(a,b){ return (b[2]-a[2]) || (b[7]-a[7]); });
@@ -501,6 +591,7 @@ export const TV2 = `
   }
 
   function fit(){
+    if(!board) return;
     var sx=window.innerWidth/1920, sy=window.innerHeight/1080, s=Math.min(sx,sy);
     board.style.transform='scale('+s+')';
     board.style.left=Math.max(0,(window.innerWidth-1920*s)/2)+'px';
@@ -528,7 +619,7 @@ export const TV2 = `
 
   // Checks once a minute so the board starts itself at 7:00am without waiting
   // for anyone to touch it, and stops itself at 7:00pm.
-  setInterval(function(){
+  if(!PHONE) setInterval(function(){
     var on=awake();
     if(on && !timer && !paused) draw(idx), schedule();
     else if(!on && timer) { clearTimeout(timer); timer=null; draw(idx); }
@@ -539,56 +630,179 @@ export const TV2 = `
     schedule();
   }
 
-  var CHOICES=[15,30,45,60,120];
-  var ctl=document.createElement('div');
-  ctl.className='tv2ctl';
-  ctl.innerHTML='<span class="lb">ROTATE EVERY</span>'
-    + CHOICES.map(function(v){ return '<button data-sec="'+v+'">'+(v<60?v+'s':(v/60)+'m')+'</button>'; }).join('')
-    + '<button data-act="pause">Pause</button>';
-  document.body.appendChild(ctl);
+  // ---- phone view: tabs, scroll, no auto-advance ----------------------------
+  // One section at a time, and the person holding the phone chooses which. The
+  // TV rotates because nobody is standing at it; a phone is being read, and a
+  // view that changes itself every twenty seconds changes mid-sentence.
+  function drawPhone(){
+    var TABS=[
+      {k:'today',  lab:'TODAY',    name:'TODAY',                 rank:'BY PIPELINE SIZE',       ac:'#7a63c4', data:BY_PIPE,  head:['CALLS','TALK','TIX','SUB','']},
+      {k:'pipe',   lab:'PIPELINE', name:'ACTIVITY &amp; PIPELINE', rank:'BY PIPELINE SIZE',     ac:'#3f6cc9', data:BY_PIPE,  head:['MTD','PIPELINE','UNLOCKED']},
+      {k:'funded', lab:'FUNDED',   name:'FUNDED PRODUCTION',     rank:'BY FUNDED + CTC+',      ac:'#2f9558', data:BY_TOTAL, head:['UNITS','FUNDED / $3M','AVG']},
+      {k:'deck',   lab:'ON DECK',  name:'ON DECK',               rank:'BY FUNDED + CTC+',      ac:'#d9942c', data:BY_TOTAL, head:['UNITS','CTC+','TOTAL']}
+    ];
+    var MSTORE='tv2.mtab';
+    var active=TABS[0].k;
+    try{ var sv=localStorage.getItem(MSTORE); if(sv&&TABS.some(function(t){return t.k===sv;})) active=sv; }catch(e){}
 
-  function paintCtl(){
-    var secs=Math.round(DWELL/1000);
-    [].forEach.call(ctl.querySelectorAll('button'), function(b){
-      if(b.dataset.act==='pause'){ b.classList.toggle('on', paused); b.textContent = paused ? 'Resume' : 'Pause'; }
-      else b.classList.toggle('on', !paused && +b.dataset.sec===secs);
-    });
-  }
-  ctl.addEventListener('click', function(e){
-    var b=e.target.closest('button'); if(!b) return;
-    e.stopPropagation();
-    if(b.dataset.act==='pause'){ paused=!paused; }
-    else {
-      DWELL=(+b.dataset.sec)*1000; paused=false; forced=true;   // manual override until the next reload
-      try{ localStorage.setItem(STORE, b.dataset.sec); }catch(e2){}
+    var wrap=document.createElement('div'); wrap.id='tv2m';
+    document.body.appendChild(wrap);
+
+    function tileFor(t){
+      var lab,big,sub,pct;
+      if(t.k==='today'){
+        lab="TODAY&rsquo;S GOAL"; big=goalPct+'%'; pct=goalPct;
+        sub=metCount+' of '+goalDenom+' hit &middot; '+subsToday+' sub'+(subsToday===1?'':'s')
+          +' &middot; '+(TIX_PENDING?'&ndash;':(B.tixTotal||0))+' tix';
+      } else if(t.k==='pipe'){
+        lab='SALES TEAM PIPELINE'; big=mM(pipeActual); pct=pipeActual/PIPE_GOAL*100;
+        sub=mM(K.pipeUnlocked||0)+' not locked &middot; '+mtdTotal+' MTD subs';
+      } else if(t.k==='funded'){
+        lab='FUNDED'; big=mM(K.funded||0); pct=(K.funded||0)/GOAL*100;
+        sub=pct.toFixed(1)+'% of $'+Math.round(GOAL/1e6)+'M &middot; '+(K.fundedUnits||0)+' units';
+      } else {
+        lab='ON DECK'; big=mM(K.ctc||0); pct=(K.ctc||0)/GOAL*100;
+        sub='funded + CTC+ '+mM(K.fundedCtc||0)+' &middot; '+(K.ctcUnits||0)+' units';
+      }
+      return '<div class="m2tile" style="--ac:'+t.ac+'"><div class="m2tl">'+lab+'</div>'
+        +'<div class="m2tb">'+big+'</div>'
+        +'<div class="m2bar"><i style="width:'+Math.max(0,Math.min(100,pct))+'%"></i></div>'
+        +'<div class="m2ts">'+sub+'</div></div>';
     }
-    paintCtl();
-    if(paused){ if(timer){clearTimeout(timer);timer=null;} prog.style.transition='none'; prog.style.width='0'; }
-    else draw(idx), schedule();
-    bump();
-  });
 
-  // The control hides itself so the TV shows a clean board; any mouse movement,
-  // tap, or key press brings it back for a few seconds.
-  var hideT=null, over=false;
-  function bump(){
-    ctl.classList.add('show');
-    if(hideT) clearTimeout(hideT);
-    if(over) return;                       // never fade while you are on it
-    hideT=setTimeout(function(){ if(!over) ctl.classList.remove('show'); }, 8000);
+    function rowFor(t,r,rank){
+      var n=r[0], cells;
+      if(t.k==='today'){
+        var td=TODAY[n]||[0,0,0], tixN=TIX[n]||0;
+        var isOoo=!!OOO[n], isDash=!!DASH[n]||isOoo;
+        if(isOoo) cells='<em class="m2wide">OUT OF OFFICE</em>';
+        else if(isDash) cells='<em class="m2wide m2role">'+((ROLE[n]||'not scored').toUpperCase())+'</em>';
+        else {
+          var cH=!CALLS_PENDING&&td[0]>=CALLS_GOAL, tH=!CALLS_PENDING&&td[1]>=TALK_GOAL;
+          var sH=td[2]>=SUB_GOAL, xH=!TIX_PENDING&&tixN>=TIX_GOAL;
+          var met=cH||tH||sH||xH, all4=cH&&tH&&sH&&xH;
+          var d='<span class="m2z">&ndash;</span>';
+          cells='<u class="'+(cH?'g':'')+'">'+(CALLS_PENDING?d:td[0])+'</u>'
+            +'<u class="'+(tH?'g':'')+'">'+(CALLS_PENDING?d:Math.round(td[1]))+'</u>'
+            +'<u class="'+(xH?'g':'')+'">'+(TIX_PENDING?d:tixN)+'</u>'
+            +'<u class="'+(sH?'g':'')+'">'+td[2]+'</u>'
+            +'<s class="'+(all4?'gold':met?'on':'off')+'"></s>';
+        }
+      } else if(t.k==='pipe'){
+        var pipe=r[2], un=r[9]||0;
+        var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
+        cells='<u class="w40">'+(MTD[n]||0)+'</u>'
+          +'<span class="m2pk '+pk+'">'+mM(pipe)+'</span>'
+          +'<u class="w62'+(un?'':' m2z')+'">'+mM(un)+'</u>';
+      } else if(t.k==='funded'){
+        var f=r[4], fp=Math.min(100,Math.round(f/3e6*100));
+        cells='<u class="w30">'+r[3]+'</u>'
+          +'<span class="m2f"><u class="w62">'+mM(f)+'</u><span class="m2g5"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span></span>'
+          +'<u class="w52">'+mK(r[5])+'</u>';
+      } else {
+        cells='<u class="w30">'+r[8]+'</u>'
+          +'<u class="w62'+(r[6]?'':' m2z')+'">'+mM(r[6])+'</u>'
+          +'<u class="w62 m2tot">'+mM(r[7])+'</u>';
+      }
+      // 60D+ gets no column here. A phone row cannot carry a fifth number without
+      // truncating the name, so the team total moves up to the section line and
+      // the per-AE detail stays on the TV and the desktop board.
+      return '<div class="m2r'+(OOO[n]?' out':'')+'"><i>'+rank+'</i>'
+        +'<b>'+n+'</b>'+cells+'</div>';
+    }
+
+    function paint(){
+      var t=null;
+      for(var i=0;i<TABS.length;i++) if(TABS[i].k===active) t=TABS[i];
+      var hdr='<div class="m2hdr"><img class="m2logo" src="/logo.png" alt="Oaktree Funding Corp">'
+        +'<div><div class="m2t1">'+(B.title||'Sales Production')+'</div>'
+        +'<div class="m2t2">'+MONTHS[m]+' '+y+' &middot; '+remaining+' of '+total+' funding days left</div></div></div>';
+      var tabs='<div class="m2tabs">'+TABS.map(function(x){
+        return '<button data-k="'+x.k+'" class="'+(x.k===active?'on':'')+'" style="--ac:'+x.ac+'">'+x.lab+'</button>';
+      }).join('')+'</div>';
+      var note=t.rank;
+      if(t.k==='pipe'){
+        var aged60=D.reduce(function(a,r){return a+(r[11]||0);},0);
+        if(aged60) note='BY PIPELINE &middot; <b class="m2red">'+mM(aged60)+'</b> 60D+';
+      }
+      var head='<div class="m2sec" style="--ac:'+t.ac+'"><span class="m2sn">'+t.name+'</span>'
+        +'<span class="m2sx">'+note+'</span></div>'
+        +'<div class="m2hd '+t.k+'"><i></i><b></b>'+t.head.map(function(h){return '<u>'+h+'</u>';}).join('')+'</div>';
+      var list='<div class="m2list '+t.k+'">'+t.data.map(function(r,j){return rowFor(t,r,j+1);}).join('')+'</div>';
+      var foot='<div class="m2foot">'+D.length+' AEs &middot; updated '+(B.updatedLabel||'—')
+        +' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div>';
+      wrap.innerHTML=hdr+tabs+tileFor(t)+head+list+foot;
+    }
+
+    wrap.addEventListener('click', function(e){
+      var b=e.target.closest ? e.target.closest('button[data-k]') : null;
+      if(!b) return;
+      active=b.getAttribute('data-k');
+      try{ localStorage.setItem(MSTORE, active); }catch(e2){}
+      paint();
+      // Switching sections should start you at the top of the new list, not
+      // wherever you happened to be in the old one.
+      window.scrollTo(0,0);
+    });
+    paint();
   }
-  ctl.addEventListener('mouseenter', function(){ over=true; if(hideT) clearTimeout(hideT); });
-  ctl.addEventListener('mouseleave', function(){ over=false; bump(); });
-  ['mousemove','touchstart','keydown'].forEach(function(ev){ document.addEventListener(ev, bump, {passive:true}); });
 
-  // Manual paging, for anyone standing at the screen.
-  document.addEventListener('keydown', function(e){
-    if(e.key==='ArrowRight'||e.key===' ') go(idx+1);
-    else if(e.key==='ArrowLeft') go(idx-1);
-  });
+  // Everything below drives the television: the dwell control, the rotation
+  // timer and the arrow keys. None of it applies to a phone.
+  if(!PHONE){
+    var CHOICES=[15,30,45,60,120];
+    var ctl=document.createElement('div');
+    ctl.className='tv2ctl';
+    ctl.innerHTML='<span class="lb">ROTATE EVERY</span>'
+      + CHOICES.map(function(v){ return '<button data-sec="'+v+'">'+(v<60?v+'s':(v/60)+'m')+'</button>'; }).join('')
+      + '<button data-act="pause">Pause</button>';
+    document.body.appendChild(ctl);
 
-  paintCtl();
-  draw(0);
-  schedule();
+    function paintCtl(){
+      var secs=Math.round(DWELL/1000);
+      [].forEach.call(ctl.querySelectorAll('button'), function(b){
+        if(b.dataset.act==='pause'){ b.classList.toggle('on', paused); b.textContent = paused ? 'Resume' : 'Pause'; }
+        else b.classList.toggle('on', !paused && +b.dataset.sec===secs);
+      });
+    }
+    ctl.addEventListener('click', function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      e.stopPropagation();
+      if(b.dataset.act==='pause'){ paused=!paused; }
+      else {
+        DWELL=(+b.dataset.sec)*1000; paused=false; forced=true;   // manual override until the next reload
+        try{ localStorage.setItem(STORE, b.dataset.sec); }catch(e2){}
+      }
+      paintCtl();
+      if(paused){ if(timer){clearTimeout(timer);timer=null;} prog.style.transition='none'; prog.style.width='0'; }
+      else draw(idx), schedule();
+      bump();
+    });
+
+    // The control hides itself so the TV shows a clean board; any mouse movement,
+    // tap, or key press brings it back for a few seconds.
+    var hideT=null, over=false;
+    function bump(){
+      ctl.classList.add('show');
+      if(hideT) clearTimeout(hideT);
+      if(over) return;                       // never fade while you are on it
+      hideT=setTimeout(function(){ if(!over) ctl.classList.remove('show'); }, 8000);
+    }
+    ctl.addEventListener('mouseenter', function(){ over=true; if(hideT) clearTimeout(hideT); });
+    ctl.addEventListener('mouseleave', function(){ over=false; bump(); });
+    ['mousemove','touchstart','keydown'].forEach(function(ev){ document.addEventListener(ev, bump, {passive:true}); });
+
+    // Manual paging, for anyone standing at the screen.
+    document.addEventListener('keydown', function(e){
+      if(e.key==='ArrowRight'||e.key===' ') go(idx+1);
+      else if(e.key==='ArrowLeft') go(idx-1);
+    });
+
+    paintCtl();
+    draw(0);
+    schedule();
+  } else {
+    drawPhone();
+  }
 })();
 `;
