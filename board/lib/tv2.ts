@@ -119,6 +119,13 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2v.b60{color:#b03a2e}
 .tv2hit{color:#127a3c;font-weight:700}
 .tv2dash{color:#ccd4de}
+/* NEW tag. Deliberately quiet: it exists to explain why a number carries no
+   tier colour, so it must not compete with the number it is explaining. */
+.tv2new{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
+  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px}
+.tv2new.ta{color:#7d8798;box-shadow:inset 0 0 0 1px #d3dae4}
+.tv2new.tb{color:#fff;background:#7b93b3}
+.tv2new.tc{color:#2a6f8c;background:#e2f0f6}
 /* Out of office. The label lives in the first TODAY cell and is allowed to
    overflow across the four empty ones beside it. A colspan would be the obvious
    way to do this, but under table-layout:fixed the browser gives a spanning cell
@@ -206,14 +213,14 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .m2hd b{flex:1 1 auto}
 .m2hd u{text-decoration:none;text-align:right}
 .m2hd.today u{flex:0 0 38px}
-.m2hd.pipe u:nth-of-type(1){flex:0 0 40px;padding-right:8px}
-.m2hd.pipe u:nth-of-type(2){flex:0 0 78px}
+.m2hd.pipe u:nth-of-type(1){flex:0 0 38px;padding-right:14px}
+.m2hd.pipe u:nth-of-type(2){flex:0 0 78px;padding-right:10px}
 .m2hd.pipe u:nth-of-type(3){flex:0 0 62px}
-.m2hd.funded u:nth-of-type(1){flex:0 0 30px}
-.m2hd.funded u:nth-of-type(2){flex:0 0 96px;padding-right:8px}
+.m2hd.funded u:nth-of-type(1){flex:0 0 34px;padding-right:10px}
+.m2hd.funded u:nth-of-type(2){flex:0 0 91px;padding-right:12px}
 .m2hd.funded u:nth-of-type(3){flex:0 0 52px}
-.m2hd.deck u:nth-of-type(1){flex:0 0 30px}
-.m2hd.deck u:nth-of-type(2){flex:0 0 62px}
+.m2hd.deck u:nth-of-type(1){flex:0 0 34px;padding-right:10px}
+.m2hd.deck u:nth-of-type(2){flex:0 0 66px;padding-right:12px}
 .m2hd.deck u:nth-of-type(3){flex:0 0 62px}
 .m2list{background:#fff;border:1px solid var(--line);border-radius:12px;padding:2px 8px}
 .m2r{display:flex;align-items:center;height:38px;border-bottom:1px solid #f1f4f8;
@@ -221,10 +228,17 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .m2r:last-child{border-bottom:none}
 .m2r i{flex:0 0 20px;font-style:normal;font-size:10.5px;color:#bcc5d1;text-align:right;padding-right:7px}
 .m2r b{flex:1 1 auto;min-width:0;font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;padding-right:5px}
+  padding-right:5px;display:flex;align-items:center}
+.m2nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m2new{flex:0 0 auto;margin-left:5px;padding:1px 4px;border-radius:4px;font-size:8.5px;
+  font-weight:700;letter-spacing:.6px;color:#7d8798;box-shadow:inset 0 0 0 1px #d3dae4}
 .m2r u{text-decoration:none;flex:0 0 38px;text-align:right;font-size:13.5px;font-weight:400}
 .m2r u.g{color:var(--green-ink);font-weight:700}
-.m2r u.w30{flex:0 0 30px}.m2r u.w40{flex:0 0 40px;padding-right:8px}.m2r u.w52{flex:0 0 52px}.m2r u.w62{flex:0 0 62px}
+.m2r u.w30{flex:0 0 34px;padding-right:10px}
+.m2r u.w40{flex:0 0 38px;padding-right:14px}
+.m2r u.w52{flex:0 0 52px}
+.m2r u.w62{flex:0 0 62px}
+.m2r u.w62.m2ctc{flex:0 0 66px;padding-right:12px}
 .m2r u.m2tot{font-weight:600}
 .m2z{color:#ccd4de}
 .m2r s{flex:0 0 28px;text-decoration:none;text-align:right;font-size:0}
@@ -236,13 +250,17 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .m2wide{flex:1 1 auto;text-align:center;font-style:normal;font-size:9.5px;font-weight:700;
   letter-spacing:.9px;color:var(--muted);background:#eef1f6;border-radius:7px;padding:3px 0;margin-right:2px}
 .m2wide.m2role{background:transparent;color:#9aa4b2;font-weight:600}
-.m2pk{flex:0 0 78px;text-align:center;font-size:13px;font-weight:500;padding:2px 0;border-radius:7px}
+.m2pk{flex:0 0 68px;margin-right:10px;text-align:center;font-size:13px;font-weight:500;padding:2px 0;border-radius:7px}
+.m2pk.m2plain{background:transparent;color:var(--ink);font-weight:400}
 .m2pk.t1{background:#127a3c;color:#fff}
 .m2pk.t2{background:#dcf3e4;color:#116b36}
 .m2pk.t3{background:#fbf2c9;color:#836607}
 .m2pk.t4{background:#fbdedb;color:#9c352f}
-.m2f{flex:0 0 96px;display:flex;align-items:center;gap:6px;justify-content:flex-end;padding-right:8px}
-.m2g5{width:22px;height:5px;border-radius:4px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
+.m2f{flex:0 0 90px;display:flex;align-items:center;gap:5px;justify-content:flex-end;padding-right:12px}
+/* The funded figure never needs the full 62px the other money columns do —
+   "$2.35M" is the widest it gets — so the slack goes to the name beside it. */
+.m2f u.w62{flex:0 0 56px}
+.m2g5{width:18px;height:5px;border-radius:4px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
 .m2g5 i{display:block;height:100%}
 .m2foot{font-size:10px;color:var(--muted);text-align:center;padding:11px 0 0}
 
@@ -269,7 +287,13 @@ export const TV2 = `
   var CALLS_PENDING=!!B.callsPending, TIX_PENDING=(B.tixPending===false?false:true);
   var CALLS_GOAL=75, TALK_GOAL=90, SUB_GOAL=1, TIX_GOAL=3;
   var GOAL=B.goal||100e6, PIPE_GOAL=300e6;
-  var DASH={}, EXEMPT={}, OOO={}, ROLE=B.roles||{};
+  var DASH={}, EXEMPT={}, OOO={}, ROLE=B.roles||{}, NOTIER={};
+  // Rows the pipeline tier shading would misrepresent — see noTier() in board.ts.
+  (B.noTierAEs||[]).forEach(function(n){NOTIER[n]=1;});
+  var NEWAE={}; (B.newAEs||[]).forEach(function(n){NEWAE[n]=1;});
+  // ?tag=b|c switches the NEW treatment while we choose one; default is the outline.
+  var TAG=(Q.get('tag')||'a').toLowerCase();
+  function newTag(n){ return NEWAE[n] ? '<span class="tv2new t'+TAG+'">NEW</span>' : ''; }
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Marked out of office today: no daily-goal expectation, and the TODAY cells
@@ -458,9 +482,9 @@ export const TV2 = `
   // S1 — TODAY + ACTIVITY & PIPELINE, ranked by pipeline size.
   function colS1(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:44px"><col style="width:206px"><col style="width:14px">'
+      +'<col style="width:44px"><col style="width:220px"><col style="width:14px">'
       +'<col style="width:54px"><col style="width:52px"><col style="width:36px"><col style="width:40px"><col style="width:46px"><col style="width:14px">'
-      +'<col style="width:42px"><col style="width:142px"><col style="width:102px"><col style="width:94px"></colgroup>';
+      +'<col style="width:42px"><col style="width:136px"><col style="width:96px"><col style="width:94px"></colgroup>';
     h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh0" colspan="5"><span>TODAY</span></th><th class="sp"></th><th class="gh gh1" colspan="4"><span>ACTIVITY &amp; PIPELINE</span></th></tr>';
     h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>CALLS</th><th>TALK</th><th>TIX</th><th>SUB</th><th>GOAL</th><th class="sp"></th>'
       +'<th>MTD</th><th>PIPELINE</th><th>UNLOCKED</th><th>60D+</th></tr>';
@@ -477,6 +501,7 @@ export const TV2 = `
       var all4=cHit&&tHit&&sHit&&xHit;   // clean sweep of the four daily categories
       var dash='<span class="tv2dash">&ndash;</span>';
       var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
+      var tierOff=!!NOTIER[n];
       var todayCells = isOoo
         ? '<td class="tv2ooo"><span>OUT OF OFFICE</span></td><td></td><td></td><td></td><td></td>'
         : (isPerm && ROLE[n])
@@ -489,10 +514,10 @@ export const TV2 = `
           +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
           +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">'+(all4?'&#9733;':'&#10003;')+'</span>')+'</td>';
       h+='<tr class="tv2row'+(all4?' sweep':'')+(isOoo?' out':'')+'">'
-        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+newTag(n)+'</td><td class="sp"></td>'
         + todayCells + '<td class="sp"></td>'
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
-        +'<td><span class="tv2pk '+pk+'">'+mM(pipe)+'</span></td>'
+        +'<td>'+(tierOff?'<span class="tv2v">'+mM(pipe)+'</span>':'<span class="tv2pk '+pk+'">'+mM(pipe)+'</span>')+'</td>'
         +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td>'
         +'<td><span class="tv2v'+(b60?' b60':' z')+'">'+mM(b60)+'</span></td></tr>';
     });
@@ -515,7 +540,7 @@ export const TV2 = `
       var fcell = f>=3e6 ? '<span class="tv2circle">'+mM(f)+'</span>'
         : '<span class="tv2frow"><span class="tv2v">'+mM(f)+'</span><span class="tv2g5"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="tv2g5p">'+fp+'%</span></span>';
       h+='<tr class="tv2row">'
-        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span></td><td class="sp"></td>'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+newTag(n)+'</td><td class="sp"></td>'
         +'<td><span class="tv2v">'+u+'</span></td>'
         +'<td>'+fcell+'</td>'
         +'<td><span class="tv2v">'+mK(avg)+'</span></td><td class="sp"></td>'
@@ -692,7 +717,8 @@ export const TV2 = `
         var pipe=r[2], un=r[9]||0;
         var pk=pipe>=15e6?'t1':pipe>=10e6?'t2':pipe>=7.5e6?'t3':'t4';
         cells='<u class="w40">'+(MTD[n]||0)+'</u>'
-          +'<span class="m2pk '+pk+'">'+mM(pipe)+'</span>'
+          +(NOTIER[n] ? '<span class="m2pk m2plain">'+mM(pipe)+'</span>'
+                      : '<span class="m2pk '+pk+'">'+mM(pipe)+'</span>')
           +'<u class="w62'+(un?'':' m2z')+'">'+mM(un)+'</u>';
       } else if(t.k==='funded'){
         var f=r[4], fp=Math.min(100,Math.round(f/3e6*100));
@@ -701,14 +727,14 @@ export const TV2 = `
           +'<u class="w52">'+mK(r[5])+'</u>';
       } else {
         cells='<u class="w30">'+r[8]+'</u>'
-          +'<u class="w62'+(r[6]?'':' m2z')+'">'+mM(r[6])+'</u>'
+          +'<u class="w62 m2ctc'+(r[6]?'':' m2z')+'">'+mM(r[6])+'</u>'
           +'<u class="w62 m2tot">'+mM(r[7])+'</u>';
       }
       // 60D+ gets no column here. A phone row cannot carry a fifth number without
       // truncating the name, so the team total moves up to the section line and
       // the per-AE detail stays on the TV and the desktop board.
       return '<div class="m2r'+(OOO[n]?' out':'')+'"><i>'+rank+'</i>'
-        +'<b>'+n+'</b>'+cells+'</div>';
+        +'<b><span class="m2nm">'+n+'</span>'+(NEWAE[n]?'<span class="m2new">NEW</span>':'')+'</b>'+cells+'</div>';
     }
 
     function paint(){
