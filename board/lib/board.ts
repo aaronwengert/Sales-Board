@@ -65,6 +65,23 @@ const ROLES: Record<string, string> = {
   "adam paniagua": "Retail",
 };
 
+// Pipeline tier shading (dark green / light green / amber / red) is a judgement
+// about pipeline health, and it is only a fair one where the pipeline has had
+// time to build. These rows print the number plainly instead. A team three weeks
+// old would otherwise show as a solid column of red that says nothing except
+// "they started recently", which is not a performance signal and reads like one.
+const NO_TIER_TEAMS = new Set(["lien kings"]);
+const NO_TIER_AES = new Set(["keir buettner", "jacob andrew"]);
+function isNewAE(ae: string): boolean {
+  return NO_TIER_AES.has(norm(ae)) || NO_TIER_TEAMS.has(norm(teamFor(ae)));
+}
+// Two overlapping reasons to drop the tier chip, and only one of them is worth
+// saying out loud. "New" explains an unshaded number; a sales manager's row is
+// already explained by the role printed across its TODAY group.
+function noTier(ae: string): boolean {
+  return isNewAE(ae) || ROLES[norm(ae)] === "Sales Manager";
+}
+
 // Regular ("hard") pipeline, all channels. Loan On-hold was added to the
 // Meridian Link export on 7/30/2026 and counts here like any other live file:
 // it hits the team pipeline tile and the AE pipeline column, and it ages into
@@ -164,6 +181,10 @@ export type BoardData = {
   tixTotal: number;
   dashAEs: string[];
   roles: Record<string, string>;
+  /** Rows whose pipeline number prints without tier shading. */
+  noTierAEs: string[];
+  /** Rows new enough that their numbers carry a NEW tag. */
+  newAEs: string[];
   exemptAEs: string[];
   /** AEs marked out of office for the current Arizona business day. Sourced
    *  from the projections app; empty when that feed is absent. */
@@ -384,6 +405,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     tixTotal,
     dashAEs: [...GOAL_DASH].map((k) => NAME2DISPLAY[k] || k),
     roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [NAME2DISPLAY[k] || k, v])),
+    noTierAEs: rows.map((r) => r[0]).filter(noTier),
+    newAEs: rows.map((r) => r[0]).filter(isNewAE),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
     oooAEs,
     callsPending: !callsIsToday,
