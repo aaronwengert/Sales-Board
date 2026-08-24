@@ -122,10 +122,8 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 /* NEW tag. Deliberately quiet: it exists to explain why a number carries no
    tier colour, so it must not compete with the number it is explaining. */
 .tv2new{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
-  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px}
-.tv2new.ta{color:#7d8798;box-shadow:inset 0 0 0 1px #d3dae4}
-.tv2new.tb{color:#fff;background:#7b93b3}
-.tv2new.tc{color:#2a6f8c;background:#e2f0f6}
+  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px;
+  color:#fff;background:#5f7794}
 /* Out of office. The label lives in the first TODAY cell and is allowed to
    overflow across the four empty ones beside it. A colspan would be the obvious
    way to do this, but under table-layout:fixed the browser gives a spanning cell
@@ -230,8 +228,8 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .m2r b{flex:1 1 auto;min-width:0;font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;
   padding-right:5px;display:flex;align-items:center}
 .m2nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.m2new{flex:0 0 auto;margin-left:5px;padding:1px 4px;border-radius:4px;font-size:8.5px;
-  font-weight:700;letter-spacing:.6px;color:#7d8798;box-shadow:inset 0 0 0 1px #d3dae4}
+.m2new{flex:0 0 auto;margin-left:5px;padding:1px 5px;border-radius:4px;font-size:8.5px;
+  font-weight:700;letter-spacing:.6px;color:#fff;background:#5f7794}
 .m2r u{text-decoration:none;flex:0 0 38px;text-align:right;font-size:13.5px;font-weight:400}
 .m2r u.g{color:var(--green-ink);font-weight:700}
 .m2r u.w30{flex:0 0 34px;padding-right:10px}
@@ -291,9 +289,7 @@ export const TV2 = `
   // Rows the pipeline tier shading would misrepresent — see noTier() in board.ts.
   (B.noTierAEs||[]).forEach(function(n){NOTIER[n]=1;});
   var NEWAE={}; (B.newAEs||[]).forEach(function(n){NEWAE[n]=1;});
-  // ?tag=b|c switches the NEW treatment while we choose one; default is the outline.
-  var TAG=(Q.get('tag')||'a').toLowerCase();
-  function newTag(n){ return NEWAE[n] ? '<span class="tv2new t'+TAG+'">NEW</span>' : ''; }
+  function newTag(n){ return NEWAE[n] ? '<span class="tv2new">NEW</span>' : ''; }
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Marked out of office today: no daily-goal expectation, and the TODAY cells

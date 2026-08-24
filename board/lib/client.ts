@@ -16,7 +16,9 @@ export const CLIENT = `
   // PERM is the permanent exemption — captured before the OOO names are folded
   // into DASH below, because the two must not look the same on screen. An
   // absence is about today; this is about the role, every day of the year.
-  var DASH={}, EXEMPT={}, OOO={}, PERM={}, ROLE=B.roles||{};
+  var DASH={}, EXEMPT={}, OOO={}, PERM={}, ROLE=B.roles||{}, NOTIER={};
+  (B.noTierAEs||[]).forEach(function(n){NOTIER[n]=1;});
+  var NEWAE={}; (B.newAEs||[]).forEach(function(n){NEWAE[n]=1;});
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;PERM[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Out of office today: no daily-goal expectation, and the TODAY group says so
@@ -94,7 +96,8 @@ export const CLIENT = `
     var fp=Math.min(100,Math.round(f/3e6*100));
     var fcell = f>=3e6 ? '<div class="circle">'+mM(f)+'</div>'
       : '<span class="frow"><span class="mval">'+mM(f)+'</span><span class="g5bar"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="g5pct">'+fp+'%</span></span>';
-    var pk = pipe>=15e6?' pk pk-t1':pipe>=10e6?' pk pk-t2':pipe>=7.5e6?' pk pk-t3':' pk pk-t4';
+    // No tier chip for rows the shading would misrepresent (see noTier in board.ts).
+    var pk = NOTIER[n] ? '' : (pipe>=15e6?' pk pk-t1':pipe>=10e6?' pk pk-t2':pipe>=7.5e6?' pk pk-t3':' pk pk-t4');
     var td=TODAY[n]||[0,0,0];
     var calls=td[0], talk=td[1], sub=td[2], tixN=TIX_TODAY[n]||0;
     var isDash=!!DASH[n], isEx=!!EXEMPT[n], counted=!isDash&&!isEx;
@@ -120,7 +123,9 @@ export const CLIENT = `
         +'<td>'+subTxt+'</td>'
         +'<td>'+goalTxt+'</td>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
-     +'<td class="l"><span class="aename'+(OOO[n]?' out':'')+'">'+n+'</span><span class="aeteam">'+tm+'</span></td>'+sp
+     +'<td class="l"><span class="aename'+(OOO[n]?' out':'')+'">'+n+'</span>'
+     +(NEWAE[n]?'<span class="newtag">NEW</span>':'')
+     +'<span class="aeteam">'+tm+'</span></td>'+sp
      + todayTxt + sp
      +'<td><span class="mval">'+(MTD_SUBS[n]||0)+'</span></td>'
      +'<td><span class="mval'+pk+'">'+mM(pipe)+'</span></td>'

@@ -19,6 +19,11 @@ export const CSS = `
     padding:2px 12px;border-radius:8px;background:#eef1f6;color:#8b95a6;
     font-size:11.5px;font-weight:700;letter-spacing:.9px;white-space:nowrap}
   .aename.out{color:#98a2b1}
+  /* NEW tag — see newAEs in board.ts. Quiet by design: it explains an unshaded
+     pipeline number rather than drawing attention away from it. */
+  .newtag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
+    font-size:9.5px;font-weight:700;letter-spacing:.7px;vertical-align:2px;
+    color:#fff;background:#5f7794}
   /* Permanently not held to the daily goals. One continuous hairline drawn
      through the TODAY group — the ledger convention for a line that does not
      apply. Deliberately unlike the OUT OF OFFICE pill above, and unlike a row
