@@ -73,6 +73,10 @@ const ROLES: Record<string, string> = {
 const NO_TIER_TEAMS = new Set(["lien kings"]);
 const NO_TIER_AES = new Set(["keir buettner", "jacob andrew"]);
 function isNewAE(ae: string): boolean {
+  // A row that already prints a role across its TODAY group never also carries
+  // NEW. Eric Ferguson is on the new team and a Sales Manager both; the role is
+  // the more useful of the two labels and two labels on one row is one too many.
+  if (ROLES[norm(ae)]) return false;
   return NO_TIER_AES.has(norm(ae)) || NO_TIER_TEAMS.has(norm(teamFor(ae)));
 }
 // Two overlapping reasons to drop the tier chip, and only one of them is worth
