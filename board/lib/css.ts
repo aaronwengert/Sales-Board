@@ -57,6 +57,9 @@ export const CSS = `
   .dl-lbl{color:var(--muted);font-weight:800;font-size:10px;letter-spacing:.3px}
   .dl-cd{color:var(--b);font-weight:800}
   .dl-resc{color:var(--amber-ink);font-weight:800}
+  .dl-closed{color:#7a4b52;font-weight:800}
+  .dl-holname{color:var(--muted);font-weight:600;font-size:11px}
+  .dl-closed.dl-today{color:#fff;background:#7a4b52;padding:1px 8px;border-radius:7px}
   .dl-cd.dl-today{color:#fff;background:#2a5bbf;padding:1px 8px;border-radius:7px;
     box-shadow:0 0 0 2px rgba(42,91,191,.25),0 0 7px rgba(42,91,191,.40)}
   .dl-resc.dl-today{color:#fff;background:#c2740e;padding:1px 8px;border-radius:7px;

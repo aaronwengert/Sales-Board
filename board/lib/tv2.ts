@@ -58,9 +58,11 @@ export const TV2_CSS = `
 .tv2dl .s{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px}
 .tv2dl .cd .v{color:#2a5bbf}
 .tv2dl .rs .v{color:#c2740e}
+.tv2dl .cl .v{color:#7a4b52}
 .tv2dl .v.now{color:#fff;padding:1px 10px;border-radius:8px}
 .tv2dl .cd .v.now{background:#2a5bbf}
 .tv2dl .rs .v.now{background:#c2740e}
+.tv2dl .cl .v.now{background:#7a4b52}
 .tv2sec{margin-left:auto;text-align:right}
 .tv2sec .s1{font-size:23px;font-weight:800;letter-spacing:.6px;color:var(--ink)}
 .tv2sec .s2{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.5px}
@@ -334,18 +336,25 @@ export const TV2 = `
   var SPLIT = Math.ceil(D.length/2);   // 40 AEs -> 20 left, 20 right
 
   // ---- header facts (mirrors the desktop header) ----
-  var HOLIDAYS=new Set(['2026-01-01','2026-01-19','2026-02-16','2026-05-25','2026-06-19','2026-07-03','2026-09-07','2026-10-12','2026-11-11','2026-11-26','2026-12-25','2027-01-01','2027-01-18','2027-02-15','2027-05-31','2027-06-18','2027-07-05','2027-09-06','2027-10-11','2027-11-11','2027-11-25','2027-12-24','2027-12-31']);
+  // Market holidays: no loan funds on these days, so each one is removed from
+  // the funding-day count. Now a name map rather than a bare set, so the header
+  // can also say WHY a day is missing instead of silently dropping it.
+  var HOLIDAYS={'2026-01-01':"New Year's Day",'2026-01-19':'MLK Day','2026-02-16':"Presidents' Day",'2026-05-25':'Memorial Day','2026-06-19':'Juneteenth','2026-07-03':'Independence Day','2026-09-07':'Labor Day','2026-10-12':'Columbus Day','2026-11-11':'Veterans Day','2026-11-26':'Thanksgiving','2026-12-25':'Christmas Day','2027-01-01':"New Year's Day",'2027-01-18':'MLK Day','2027-02-15':"Presidents' Day",'2027-05-31':'Memorial Day','2027-06-18':'Juneteenth','2027-07-05':'Independence Day','2027-09-06':'Labor Day','2027-10-11':'Columbus Day','2027-11-11':'Veterans Day','2027-11-25':'Thanksgiving','2027-12-24':'Christmas Day','2027-12-31':"New Year's Day"};
   var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-  function fdays(s,e){var n=0,d=new Date(s);while(d<=e){var w=d.getDay();if(w>=1&&w<=5&&!HOLIDAYS.has(ymd(d)))n++;d.setDate(d.getDate()+1);}return n;}
+  function fdays(s,e){var n=0,d=new Date(s);while(d<=e){var w=d.getDay();if(w>=1&&w<=5&&!(ymd(d) in HOLIDAYS))n++;d.setDate(d.getDate()+1);}return n;}
   var now=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Phoenix'}));
   var y=now.getFullYear(), m=now.getMonth();
   var first=new Date(y,m,1), last=new Date(y,m+1,0), today=new Date(y,m,now.getDate());
   var pastWire=(now.getHours()+now.getMinutes()/60)>=15;
+  // Days left counts from tomorrow once the wire cutoff has passed. Counted
+  // directly rather than as total-elapsed+1: that arithmetic added today back
+  // unconditionally, so on a weekend or a market holiday — a day that is not
+  // fundable and was never in 'elapsed' — it reported one day too many. Both
+  // boards now derive this the same way, from the same holiday map.
+  var rStart=pastWire?new Date(y,m,now.getDate()+1):today;
   var total=fdays(first,last), elapsed=fdays(first,today);
-  // Days left counts from tomorrow once the wire cutoff has passed, so
-  // elapsed + remaining === total on every day of the month.
-  var remaining=total-elapsed+(pastWire?0:1);
+  var remaining=fdays(rStart,last);
   if(remaining<0) remaining=0;
 
   // ---- viewing hours ----
@@ -395,8 +404,35 @@ export const TV2 = `
       +'<div class="v tnum'+(n===0?' now':'')+'">'+(n===0?'TODAY':txt)+'</div>'
       +'<div class="s">'+(n===0?txt:when)+'</div></div>';
   }
-  var dlBlock=dlChip('CD DEADLINE','cd',_dl.cd)+dlChip('RESCISSION','rs',_dl.resc);
-  dlBlock = dlBlock ? '<div class="tv2dl">'+dlBlock+'</div>' : '';
+  // Next market holiday inside the reporting month, if it has not passed. Same
+  // chip anatomy as the deadlines, but the sub-line names the day rather than
+  // counting down to it — "why is the office shut" beats "in 14 days".
+  function holNext(){
+    var best=null, pre=y+'-'+String(m+1).padStart(2,'0');
+    for(var k in HOLIDAYS){
+      if(k.slice(0,7)!==pre || dlDays(k)<0) continue;
+      if(!best || k<best) best=k;
+    }
+    return best;
+  }
+  function holChip(key){
+    var n=dlDays(key), d=dlDate(key);
+    var txt=MONTHS[d.getMonth()].slice(0,3)+' '+d.getDate();
+    return '<div class="d cl"><div class="k">CLOSED</div>'
+      +'<div class="v tnum'+(n===0?' now':'')+'">'+(n===0?'TODAY':txt)+'</div>'
+      +'<div class="s">'+HOLIDAYS[key]+'</div></div>';
+  }
+  // Chips run in date order, so whatever lands first in the month reads first.
+  // Fixed positions would have put a Labor Day on the 7th to the right of a CD
+  // deadline on the 22nd.
+  var chips=[];
+  if(_dl.cd)   chips.push({d:_dl.cd,   h:dlChip('CD DEADLINE','cd',_dl.cd)});
+  if(_dl.resc) chips.push({d:_dl.resc, h:dlChip('RESCISSION','rs',_dl.resc)});
+  var _hol=holNext();
+  if(_hol)     chips.push({d:_hol, h:holChip(_hol)});
+  chips = chips.filter(function(c){ return c.h; }).sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
+  var dlBlock = chips.length
+    ? '<div class="tv2dl">'+chips.map(function(c){ return c.h; }).join('')+'</div>' : '';
 
   // ---- goal math (same rules as the desktop board) ----
   var metCount=0, goalDenom=0, subsToday=0;

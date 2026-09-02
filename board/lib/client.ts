@@ -153,10 +153,13 @@ export const CLIENT = `
   $('mtdpill').textContent=mtdTotal+' MTD subs';
 
   // ---- funding-day + pace (Arizona time) ----
-  var HOLIDAYS=new Set(['2026-01-01','2026-01-19','2026-02-16','2026-05-25','2026-06-19','2026-07-03','2026-09-07','2026-10-12','2026-11-11','2026-11-26','2026-12-25','2027-01-01','2027-01-18','2027-02-15','2027-05-31','2027-06-18','2027-07-05','2027-09-06','2027-10-11','2027-11-11','2027-11-25','2027-12-24','2027-12-31']);
+  // Market holidays: no loan funds on these days, so each one is removed from
+  // the funding-day count. Now a name map rather than a bare set, so the header
+  // can also say WHY a day is missing instead of silently dropping it.
+  var HOLIDAYS={'2026-01-01':"New Year's Day",'2026-01-19':'MLK Day','2026-02-16':"Presidents' Day",'2026-05-25':'Memorial Day','2026-06-19':'Juneteenth','2026-07-03':'Independence Day','2026-09-07':'Labor Day','2026-10-12':'Columbus Day','2026-11-11':'Veterans Day','2026-11-26':'Thanksgiving','2026-12-25':'Christmas Day','2027-01-01':"New Year's Day",'2027-01-18':'MLK Day','2027-02-15':"Presidents' Day",'2027-05-31':'Memorial Day','2027-06-18':'Juneteenth','2027-07-05':'Independence Day','2027-09-06':'Labor Day','2027-10-11':'Columbus Day','2027-11-11':'Veterans Day','2027-11-25':'Thanksgiving','2027-12-24':'Christmas Day','2027-12-31':"New Year's Day"};
   var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-  function fundingDays(s,e){var n=0,d=new Date(s);while(d<=e){var dow=d.getDay();if(dow>=1&&dow<=5&&!HOLIDAYS.has(ymd(d)))n++;d.setDate(d.getDate()+1);}return n;}
+  function fundingDays(s,e){var n=0,d=new Date(s);while(d<=e){var dow=d.getDay();if(dow>=1&&dow<=5&&!(ymd(d) in HOLIDAYS))n++;d.setDate(d.getDate()+1);}return n;}
   var now=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Phoenix'}));
   var y=now.getFullYear(), m=now.getMonth();
   var first=new Date(y,m,1), last=new Date(y,m+1,0), today=new Date(y,m,now.getDate());
@@ -176,9 +179,21 @@ export const CLIENT = `
   var _dl=DEADLINES[ymKey]||{};
   function dlToday(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime()===today.getTime(); }
   function dlBadge(lbl,cls,s){ var t=dlToday(s); return '<span class="dl-lbl">'+lbl+'</span> <span class="'+cls+(t?' dl-today':'')+'">'+(t?'Today':fmtDL(s))+'</span>'; }
-  var dlParts=[];
-  if(_dl.cd   && dlLive(_dl.cd))   dlParts.push(dlBadge('CD','dl-cd',_dl.cd));
-  if(_dl.resc && dlLive(_dl.resc)) dlParts.push(dlBadge('Rescission','dl-resc',_dl.resc));
+  // All three entries, kept in date order so the earliest reads first.
+  var dlEntries=[];
+  if(_dl.cd   && dlLive(_dl.cd))   dlEntries.push({d:_dl.cd,   h:dlBadge('CD','dl-cd',_dl.cd)});
+  if(_dl.resc && dlLive(_dl.resc)) dlEntries.push({d:_dl.resc, h:dlBadge('Rescission','dl-resc',_dl.resc)});
+  // Market holiday in this month, named, so a missing funding day is explained.
+  (function(){
+    var pre=y+'-'+String(m+1).padStart(2,'0'), best=null;
+    for(var k in HOLIDAYS){ if(k.slice(0,7)!==pre) continue; if(!dlLive(k)) continue;
+      if(!best || k < best) best=k; }
+    if(best) dlEntries.push({d:best, h:'<span class="dl-lbl">Closed</span> <span class="dl-closed'
+      +(dlToday(best)?' dl-today':'')+'">'+(dlToday(best)?'Today':fmtDL(best))
+      +'</span> <span class="dl-holname">'+HOLIDAYS[best]+'</span>'});
+  })();
+  dlEntries.sort(function(a,b){ return a.d<b.d?-1:(a.d>b.d?1:0); });
+  var dlParts=dlEntries.map(function(e){ return e.h; });
   var dlLine = dlParts.length ? '<span class="dl-head">Deadlines:</span> '+dlParts.join('&nbsp;&nbsp;') : '';
   if(dlLine && $('deadlines')){ $('deadlines').innerHTML=dlLine; $('deadlines').style.display=''; }
   $('pacefill').style.width=Math.min(100,fundedPct).toFixed(1)+'%';
