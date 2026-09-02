@@ -60,6 +60,8 @@ const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 // group — so adding someone to GOAL_DASH never requires touching this.
 const ROLES: Record<string, string> = {
   "eric ferguson": "Sales Manager",
+  "adam martin": "Sales Manager",
+  "brian sherrill": "Sales Manager",
   "matthew cefalo": "Sales Manager",
   "john giordano": "Sales Manager",
   "adam paniagua": "Retail",
