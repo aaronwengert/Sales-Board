@@ -14,19 +14,22 @@ export const BOARDS: Record<Channel, { title: string; goal: number }> = {
   correspondent: { title: "Correspondent Sales Production", goal:  50e6 },
 };
 
+// Roster of record. The Rainmakers were dissolved 2026-09-16 and their eleven
+// redistributed; Reese Rogers went to HOUSE and Brian Sherrill left the company.
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
-  "The Rainmakers": { channel: "wholesale", aes: ["Brian Sherrill","Benjamin Martin","Djimon Colbert","Gregory Ward","Jacob Andrew","Joseph Marino","Kyle Shanahan","Logan Kincade","Mari Woods","Reese Rogers","Zia Hasso"] },
-  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","Jeff Laux","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua"] },
-  "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Jeremy Rohrer","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby"] },
-  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Michael Blaschuk","Ryan Matyniak"] },
-  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith"] },
+  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua","Zia Hasso","Michael Blaschuk"] },
+  "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby","Djimon Colbert","Joseph Marino"] },
+  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Ryan Matyniak","Benjamin Martin","Logan Kincade","Mari Woods"] },
+  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
-  "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins","Darin Judis","Dianne Minor","Todd Lautzenheiser"] },
+  "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins"] },
 };
 // Former AEs still count: their wholesale-channel funded loans count toward the
 // goal, and they show on the board (tagged "· former") any month they funded.
-const FORMER_TEAM: Record<string, string> = { "aj laux": "The Rainmakers", "amari aiu": "The Rainmakers" };
+// Their old team no longer exists, and pinning them to a surviving one would
+// credit that team with funded dollars it never sold. They group under Former.
+const FORMER_TEAM: Record<string, string> = { "aj laux": "Former", "amari aiu": "Former" };
 
 // Scheduled removals: each AE drops off the board on/after this Arizona date —
 // no longer seeded, counted, or shown. Set for reps leaving on a known date so
@@ -50,7 +53,7 @@ function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 //   and denominator). They are NOT seeded, so with no data they don't appear.
 // GOAL_EXEMPT — TODAY data stays live on their row, but they are excluded
 //   from the goal % math the same way.
-const GOAL_DASH = new Set(["eric ferguson","adam martin","brian sherrill","matthew cefalo","john giordano","jeremy rohrer","adam paniagua"]);
+const GOAL_DASH = new Set(["eric ferguson","adam martin","matthew cefalo","john giordano","adam paniagua"]);
 const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 
 // Why a GOAL_DASH row is exempt, in the person's own words rather than the
@@ -61,7 +64,6 @@ const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 const ROLES: Record<string, string> = {
   "eric ferguson": "Sales Manager",
   "adam martin": "Sales Manager",
-  "brian sherrill": "Sales Manager",
   "matthew cefalo": "Sales Manager",
   "john giordano": "Sales Manager",
   "adam paniagua": "Retail",
@@ -74,11 +76,16 @@ const ROLES: Record<string, string> = {
 // "they started recently", which is not a performance signal and reads like one.
 const NO_TIER_TEAMS = new Set(["lien kings"]);
 const NO_TIER_AES = new Set(["keir buettner", "jacob andrew"]);
+// Transfers in from the dissolved Rainmakers. They inherit the Lien Kings'
+// unshaded pipeline, because a team-wide book still reads as one book, but they
+// are not new to the company and must not carry the NEW tag.
+const NOT_NEW = new Set(["gregory ward", "kyle shanahan"]);
 function isNewAE(ae: string): boolean {
   // A row that already prints a role across its TODAY group never also carries
   // NEW. Eric Ferguson is on the new team and a Sales Manager both; the role is
   // the more useful of the two labels and two labels on one row is one too many.
   if (ROLES[norm(ae)]) return false;
+  if (NOT_NEW.has(norm(ae))) return false;
   return NO_TIER_AES.has(norm(ae)) || NO_TIER_TEAMS.has(norm(teamFor(ae)));
 }
 // Two overlapping reasons to drop the tier chip, and only one of them is worth
@@ -87,6 +94,15 @@ function isNewAE(ae: string): boolean {
 function noTier(ae: string): boolean {
   return isNewAE(ae) || ROLES[norm(ae)] === "Sales Manager";
 }
+
+// Daily stage counters for the email dials: loans that ENTERED a stage today,
+// identified by Loan Status Date landing on the current Arizona day. Verified
+// against a full day's export (Tue 9/15): 13 into doc check, 12 into
+// underwriting, 18 subs — all sensible against a 30/day target. Condition
+// Review is deliberately NOT underwriting here; it ran 48 that day and would
+// swamp the dial.
+const DOCCHECK_ST = new Set(["document check", "document check failed"]);
+const UW_ST = new Set(["in underwriting", "final underwriting"]);
 
 // Regular ("hard") pipeline, all channels. Loan On-hold was added to the
 // Meridian Link export on 7/30/2026 and counts here like any other live file:
@@ -201,6 +217,8 @@ export type BoardData = {
     pipeline: number; pipeLocked: number; pipeUnlocked: number; lockedPct: number; pipeSoft: number; pipeStale: number; pipeStaleN: number;
     funded: number; fundedUnits: number; goalElig: number;
     ctc: number; ctcUnits: number; fundedCtc: number;
+    /** Loans that entered these stages today, and subs opened today. */
+    docCheckToday: number; uwToday: number; subsToday: number;
   };
   updatedLabel: string;
   callsUpdatedLabel: string;
@@ -246,6 +264,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   const HOUSE_AGG: Agg = { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 };
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
+  let docCheckToday = 0, uwToday = 0;
   // Aging boundaries (rolling, Arizona). 30 days: soft-pipeline freshness
   // gate and the start of the idle bands; 60 days: the 30–59d / 60+d split.
   const softCut = new Date(az); softCut.setDate(softCut.getDate() - 30);
@@ -287,6 +306,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     // files that have reached underwriting or doc check. The team tile keeps
     // counting them, so the AE column deliberately does NOT sum to the tile.
     const inPipeAE = inPipe && !AE_PIPE_EXCLUDE.has(st);
+
+    if (chOk && sd && sd.m === todayM && sd.d === todayD && sd.y === todayY) {
+      if (DOCCHECK_ST.has(st)) docCheckToday += 1;
+      if (UW_ST.has(st)) uwToday += 1;
+    }
 
     if (wh) {
       // House reps accumulate into a throwaway bucket: the team-level counters
@@ -421,6 +445,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       pipeline: pipeAll, pipeLocked, pipeUnlocked, lockedPct: pipeAll ? pipeLocked / pipeAll * 100 : 0, pipeSoft, pipeStale, pipeStaleN,
       funded: fundAll, fundedUnits: fundUnits, goalElig: eligAll,
       ctc: ctcAll, ctcUnits, fundedCtc: fundAll + ctcAll,
+      docCheckToday, uwToday,
+      subsToday: Object.values(today).reduce((a, t) => a + (t[2] || 0), 0),
     },
     updatedLabel,
     callsUpdatedLabel,

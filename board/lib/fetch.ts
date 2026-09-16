@@ -148,7 +148,7 @@ function emptyBoard(channel: Channel): BoardData {
   const cfg = BOARDS[channel];
   return {
     rows: [], today: {}, mtd: {}, tix: {}, tixTotal: 0, dashAEs: [], roles: {}, noTierAEs: [], newAEs: [], exemptAEs: [], oooAEs: [], callsPending: true, tixPending: true,
-    kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, pipeSoft: 0, pipeStale: 0, pipeStaleN: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0 },
+    kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, pipeSoft: 0, pipeStale: 0, pipeStaleN: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0, docCheckToday: 0, uwToday: 0, subsToday: 0 },
     updatedLabel: "—",
     callsUpdatedLabel: "—",
     title: cfg.title, goal: cfg.goal, channel,

@@ -6,8 +6,13 @@ import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 // passes through; otherwise the visitor is sent to /unlock. The gate is a no-op
 // unless BOARD_PIN is set in the environment, so a fresh deploy is never locked
 // out before the PIN is configured.
+//
+// /api/report and /api/digest are excluded here because they run their own
+// check — the PIN cookie OR a REPORT_KEY query parameter. A scheduled job has
+// no cookie, so redirecting it to /unlock would break automation; those two
+// routes reject unauthorized callers themselves rather than deferring to this.
 export const config = {
-  matcher: ["/((?!api/unlock|api/report|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
+  matcher: ["/((?!api/unlock|api/report|api/digest|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
 };
 
 export async function middleware(req: NextRequest) {
