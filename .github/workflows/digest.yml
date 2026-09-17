@@ -1,0 +1,45 @@
+name: Daily goal digest
+
+# Fired by cron-job.org at 10:00, 12:00, 15:00 and 18:00 Arizona, a few minutes
+# after the hourly export lands so the numbers are the ones on the board. No
+# `schedule:` block — GitHub's scheduler lags badly at peak, sometimes by the
+# better part of an hour, which is the whole reason the export moved off it.
+#
+# The board decides whether a run should actually send: /api/digest returns
+# skip:true at the weekend, and the job exits quietly.
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: "Send to this address instead (test send, subject gets [TEST])"
+        type: string
+        required: false
+      dry_run:
+        description: "Render only — write digest_preview.html and send nothing"
+        type: boolean
+        default: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Phoenix
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      REPORT_KEY: ${{ secrets.REPORT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Send digest
+        run: |
+          python meridian_report_bot.py --digest \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.to && format('--to {0} --force', inputs.to) || '' }}
+      - name: Upload preview
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-preview
+          path: digest_preview.html
