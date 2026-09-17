@@ -225,6 +225,8 @@ export type BoardData = {
   /** Rows new enough that their numbers carry a NEW tag. */
   newAEs: string[];
   exemptAEs: string[];
+  /** Per AE: [entered doc check today, entered underwriting today]. */
+  stage: Record<string, [number, number]>;
   teamManagers: Record<string, string>;
   /** AEs marked out of office for the current Arizona business day. Sourced
    *  from the projections app; empty when that feed is absent. */
@@ -283,6 +285,13 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
   let docCheckToday = 0, uwToday = 0;
+  // [doc check, underwriting] entered today, per AE.
+  const stage: Record<string, [number, number]> = {};
+  const bump = (who: string, idx: 0 | 1) => {
+    const disp = canon(who);
+    if (!teamFor(disp)) return;            // not on the roster: dial only
+    (stage[disp] = stage[disp] || [0, 0])[idx] += 1;
+  };
   // Aging boundaries (rolling, Arizona). 30 days: soft-pipeline freshness
   // gate and the start of the idle bands; 60 days: the 30–59d / 60+d split.
   const softCut = new Date(az); softCut.setDate(softCut.getDate() - 30);
@@ -326,8 +335,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const inPipeAE = inPipe && !AE_PIPE_EXCLUDE.has(st);
 
     if (chOk && sd && sd.m === todayM && sd.d === todayD && sd.y === todayY) {
-      if (DOCCHECK_ST.has(st)) docCheckToday += 1;
-      if (UW_ST.has(st)) uwToday += 1;
+      // Team-wide counters for the dials, and the same events attributed to the
+      // AE who owns the file so a row can show its own stage movement. The two
+      // always agree: every increment below also increments the dial above.
+      if (DOCCHECK_ST.has(st)) { docCheckToday += 1; bump(name, 0); }
+      if (UW_ST.has(st)) { uwToday += 1; bump(name, 1); }
     }
 
     if (wh) {
@@ -456,6 +468,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     noTierAEs: rows.map((r) => r[0]).filter(noTier),
     newAEs: rows.map((r) => r[0]).filter(isNewAE),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
+    stage,
     teamManagers: TEAM_MANAGERS,
     oooAEs,
     callsPending: !callsIsToday,

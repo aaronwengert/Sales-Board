@@ -18,7 +18,7 @@ const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sa
 const INK = "#17233d", MUT = "#6b7686", LINE = "#d9e0ea", GRN = "#127a3c", PAGE = "#ffffff";
 
 type AE = {
-  name: string; calls: number; talk: number; tix: number; subs: number;
+  name: string; calls: number; talk: number; tix: number; subs: number; doc: number; uw: number;
   /** What to print. A pending feed shows a dash, exactly as the board does —
    *  printing a real 10 next to a column that cannot score reads as a bad day. */
   callsTxt: string; talkTxt: string; tixTxt: string;
@@ -29,7 +29,7 @@ type AE = {
    *  a hit the denominator never counted. */
   exempt: boolean;
 };
-type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hidden: { calls: number; talk: number; tix: number; subs: number }[]; manager: string | null; hit: number; n: number; pct: number };
+type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hidden: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }[]; manager: string | null; hit: number; n: number; pct: number };
 
 /** Team rollups, using exactly the board's inclusion rules. */
 export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: number; pct: number } {
@@ -42,8 +42,10 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
     if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0 });
     const g = byTeam.get(team)!;
     const raw = b.today[name] || [0, 0, 0];
+    const st = b.stage?.[name] || [0, 0];
     const asHidden = () => g.hidden.push({
       calls: raw[0], talk: Math.round(raw[1]), tix: b.tix[name] || 0, subs: raw[2],
+      doc: st[0], uw: st[1],
     });
     if (ooo.has(name)) { g.sidelined.push({ name, why: "Out of office" }); asHidden(); continue; }
     if (dash.has(name)) {
@@ -90,6 +92,7 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
       callsTxt: b.callsPending ? DASH_TXT : String(calls),
       talkTxt: b.callsPending ? DASH_TXT : String(talk),
       tixTxt: b.tixPending ? DASH_TXT : String(tix),
+      doc: (b.stage?.[name] || [0, 0])[0], uw: (b.stage?.[name] || [0, 0])[1],
       cH, tH, xH, sH, met, all4, gap, exempt: isExempt,
     });
   }
@@ -254,13 +257,16 @@ function bar(pct: number, color: string, w: number, h: number) {
     + `<td height="${h}" bgcolor="#dce3ec" style="height:${h}px;font-size:0;line-height:0">&nbsp;</td></tr>`);
 }
 
-const W = { calls: 33, talk: 33, tix: 26, subs: 28, stat: 60 };
-const headCell = (txt: string, w: number) =>
-  `<td width="${w}" align="right" style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1.2;color:#98a2b1;letter-spacing:.6px;padding:0 0 6px 5px">${txt}</td>`;
+const W = { calls: 58, talk: 58, tix: 46, subs: 48, doc: 48, uw: 46, stat: 86 };
+const CARD_PAD = 12;
+const headCell = (txt: string, w: number, padRight = 0) =>
+  `<td width="${w + padRight}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
+  + `line-height:1.2;color:#5f6b7a;letter-spacing:.6px;padding:0 ${padRight}px 6px 5px">${txt}</td>`;
 const headerRow = () =>
-  `<tr><td style="padding:0 0 6px">&nbsp;</td>`
+  `<tr><td style="padding:0 0 6px ${CARD_PAD}px">&nbsp;</td>`
   + headCell("CALLS", W.calls) + headCell("TALK", W.talk) + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
-  + headCell("STATUS", W.stat) + `</tr>`;
+  + headCell("DOC", W.doc) + headCell("UW", W.uw)
+  + headCell("STATUS", W.stat, CARD_PAD) + `</tr>`;
 
 /** The board's own language for a hit, carried across verbatim: the metric that
  *  scored wears the green pill, and the status column is the round check in its
@@ -289,30 +295,32 @@ function aeRow(a: AE) {
       : a.gap
         ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
         : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
-  return `<tr><td style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
+  return `<tr><td style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:7px 0 7px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk) + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
-    + `<td width="${W.stat}" align="right" style="padding:7px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
+    + num(String(a.doc), false, W.doc) + num(String(a.uw), false, W.uw)
+    + `<td width="${W.stat + CARD_PAD}" align="right" style="padding:7px ${CARD_PAD}px 7px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
 /** What the team actually did today, across every row printed above it. Talk is
  *  minutes, so it sums; the others are counts. Sidelined rows contribute
  *  nothing because they have nothing to contribute. */
-function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number; subs: number }[],
+function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }[],
                   band: { bg: string; line: string; ink: string }) {
-  const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number }) => number) =>
+  const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }) => number) =>
     aes.reduce((t, a) => t + f(a), 0) + hidden.reduce((t, h) => t + f(h), 0);
   const cell = (v: number | string, w: number) =>
     `<td width="${w}" align="right" style="padding:8px 0 8px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
     + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
   return `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.7px;`
-    + `padding:8px 0 8px 6px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
+    + `padding:8px 0 8px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
     + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk)
     + cell(n(sum((a) => a.tix)), W.tix) + cell(n(sum((a) => a.subs)), W.subs)
-    + `<td width="${W.stat}" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
+    + cell(n(sum((a) => a.doc)), W.doc) + cell(n(sum((a) => a.uw)), W.uw)
+    + `<td width="${W.stat + CARD_PAD}" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
 }
 
 const sideRow = (s: { name: string; why: string }) =>
-  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
-  + `<td colspan="5" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
+  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:7px 0 7px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
+  + `<td colspan="7" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:7px ${CARD_PAD}px 7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
 
 /** Daily stage targets for the dial row, team-wide. Calibrated against a full
  *  day's export (Tue 9/15: 18 subs, 13 into doc check, 12 into underwriting). */
@@ -533,6 +541,8 @@ export function renderDigest(
     dialPct?: boolean;
     /** How the pace colour rule is explained under the dials. */
     legend?: LegendStyle;
+    /** 1 stacks the team cards full width; 2 (the default) runs them two across. */
+    columns?: 1 | 2;
   },
 ): Digest {
   const { teams, hit, total, pct } = digestTeams(b);
@@ -627,7 +637,7 @@ export function renderDigest(
         + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#6f7d8c;padding-top:1px">${esc(g.manager)}</div>` : "")
         + `</td>`
         + `<td align="right" valign="middle" width="46" style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${clean ? GRN : c};white-space:nowrap">${g.hit}/${g.n}</td></tr>`)
-      + `</td></tr><tr><td style="padding:8px 12px 10px">${tbl(`width="100%"`, rows)}</td></tr>`);
+      + `</td></tr><tr><td style="padding:8px 0 0">${tbl(`width="100%"`, rows)}</td></tr>`);
   };
 
   // Two continuous columns rather than paired rows. Rows-of-two left a hole
@@ -637,17 +647,22 @@ export function renderDigest(
   // even that stays small. Reading runs down the left column then the right,
   // which the BY TEAM standings above have already ranked.
   const cost = (g: Team) => g.aes.length + g.sidelined.length + 2;
-  const colA: Team[] = [], colB: Team[] = [];
-  let hA = 0, hB = 0;
-  for (const g of teams) {
-    if (hA <= hB) { colA.push(g); hA += cost(g); } else { colB.push(g); hB += cost(g); }
+  let cards: string;
+  if (opts.columns === 1) {
+    cards = teams.map((g) => `<tr><td style="padding:0 0 10px">${teamCard(g)}</td></tr>`).join("");
+  } else {
+    const colA: Team[] = [], colB: Team[] = [];
+    let hA = 0, hB = 0;
+    for (const g of teams) {
+      if (hA <= hB) { colA.push(g); hA += cost(g); } else { colB.push(g); hB += cost(g); }
+    }
+    const stack = (col: Team[]) =>
+      col.map((g) => `<tr><td style="padding:0 0 10px">${teamCard(g)}</td></tr>`).join("");
+    cards = `<tr>`
+      + `<td width="50%" valign="top" style="padding:0 5px 0 0">${tbl(`width="100%"`, stack(colA))}</td>`
+      + `<td width="50%" valign="top" style="padding:0 0 0 5px">${tbl(`width="100%"`, stack(colB))}</td>`
+      + `</tr>`;
   }
-  const stack = (col: Team[]) =>
-    col.map((g) => `<tr><td style="padding:0 0 10px">${teamCard(g)}</td></tr>`).join("");
-  const cards = `<tr>`
-    + `<td width="50%" valign="top" style="padding:0 5px 0 0">${tbl(`width="100%"`, stack(colA))}</td>`
-    + `<td width="50%" valign="top" style="padding:0 0 0 5px">${tbl(`width="100%"`, stack(colB))}</td>`
-    + `</tr>`;
 
   // A pending feed is stated, not hidden — a quiet zero looks like a bad day.
   const pending: string[] = [];
@@ -666,6 +681,10 @@ export function renderDigest(
       + `<td align="right">`
       + `<div style="font-family:${F};font-size:12px;font-weight:600;line-height:1.3;color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</div>`
       + `<div style="font-family:${F};font-size:11px;font-weight:400;line-height:1.4;color:#8fb49d">${Math.round(pace * 100)}% of day complete</div>`
+      + `<div style="height:4px;line-height:4px;font-size:0">&nbsp;</div>`
+      + tbl(`width="130" style="width:130px;border-collapse:collapse;margin:0 0 0 auto"`,
+        `<tr><td height="4" bgcolor="#7fae92" style="height:4px;width:${Math.max(2, Math.round(pace * 100))}%;background:#7fae92;font-size:0;line-height:0">&nbsp;</td>`
+        + `<td height="4" bgcolor="#2c6543" style="height:4px;background:#2c6543;font-size:0;line-height:0">&nbsp;</td></tr>`)
       + `</td></tr>`)
     + `</td></tr>`
     + banner
@@ -681,14 +700,16 @@ export function renderDigest(
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding-bottom:2px">BY TEAM</td>`
       + `<td align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.2;color:#98a2b1;letter-spacing:.7px;padding-bottom:2px">HIT RATE</td></tr>`)
     + tbl(`width="100%"`, lb)
-    + `<div style="height:14px;line-height:14px;font-size:0">&nbsp;</div>`
-    + tbl(`width="100%" bgcolor="${band.bg}" style="background:${band.bg};border:1px solid ${band.line}"`,
-      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.8px;padding:10px 0 10px 12px">ALL TEAMS</td>`
-      + allAEs.map((x) => `<td width="108" align="right" style="padding:10px 0">`
+    + `</td></tr>`
+    + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border-left:1px solid ${LINE};border-right:1px solid ${LINE};padding:14px 0 0">`
+    + tbl(`width="100%" bgcolor="${band.bg}" style="background:${band.bg};border-top:1px solid ${band.line};border-bottom:1px solid ${band.line}"`,
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.8px;padding:10px 0 10px 14px;white-space:nowrap">ALL TEAMS</td>`
+      + allAEs.map((x) => `<td align="center" style="padding:10px 0">`
         + `<div style="font-family:${F};font-size:9px;font-weight:700;line-height:1.2;color:${band.ink};letter-spacing:.7px;opacity:.75">${x.label}</div>`
         + `<div style="font-family:${F};font-size:17px;font-weight:800;line-height:1.25;color:${INK};letter-spacing:-.3px">${n(x.value)}</div></td>`).join("")
-      + `<td width="14">&nbsp;</td></tr>`)
+      + `</tr>`)
     + `</td></tr>`
+    + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;height:10px;line-height:10px;font-size:0">&nbsp;</td></tr>`
     + (leaderStyle === "off" ? "" :
         `<tr><td style="padding:16px 0 8px;font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px">TODAY&rsquo;S BEST</td></tr>`
         + sweepBanner(teams)
