@@ -310,7 +310,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const locked = (r["Rate Locked Date"] || "").trim() !== "";
     const od = mdy(r["Opened Date"]);
     // Channel gate: correspondent-channel loans don't count on a non-correspondent
-    // board. Retail-channel loans by a wholesale AE DO count (they keep that
+    // board — not in the pipeline, not in On Deck, not in funded, not in subs.
+    // Retail-channel loans by a wholesale AE DO count (they keep that
     // production); only correspondent is carved out.
     const chOk = channel === "correspondent" || ch !== "correspondent";
 
@@ -342,7 +343,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       if (UW_ST.has(st)) { uwToday += 1; bump(name, 1); }
     }
 
-    if (wh) {
+    if (wh && chOk) {
       // House reps accumulate into a throwaway bucket: the team-level counters
       // in these branches still fire, but nothing lands in `ae`, so no row.
       const a = isHouse(name) ? HOUSE_AGG : A(name);
@@ -363,14 +364,13 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       // funded — gate on inPipe (the team rule), not the stricter AE rule, so
       // dropping a status from the AE column can't leak it into On Deck.
       if (!inPipe && CTC.has(st)) { a.ctc += amt; a.ctcU += 1; ctcAll += amt; ctcUnits += 1; }
-      else if (!inPipe && FUND.has(st) && fd && fd.m === lm && fd.y === ly && chOk) {
-        // Funded production for the reporting month (correspondent carved out above).
+      else if (!inPipe && FUND.has(st) && fd && fd.m === lm && fd.y === ly) {
+        // Funded production for the reporting month.
         a.fund += amt; a.units += 1; fundAll += amt; fundUnits += 1;
         a.goalElig += amt; eligAll += amt;
       }
-      // Subs = loans OPENED in the reporting month (Opened Date). Correspondent
-      // opens are excluded on non-correspondent boards, same as funded.
-      if (od && od.m === lm && od.y === ly && chOk && !isHouse(name)) {
+      // Subs = loans OPENED in the reporting month (Opened Date).
+      if (od && od.m === lm && od.y === ly && !isHouse(name)) {
         mtd[name] = (mtd[name] || 0) + 1;
         if (od.m === todayM && od.d === todayD && od.y === todayY) {
           today[name] = today[name] || [0, 0, 0];
