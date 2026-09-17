@@ -260,13 +260,17 @@ function bar(pct: number, color: string, w: number | "100%", h: number) {
     + `<td height="${h}" bgcolor="#dce3ec" style="height:${h}px;font-size:0;line-height:0">&nbsp;</td></tr>`);
 }
 
-const W = { calls: 58, talk: 58, tix: 46, subs: 48, doc: 48, uw: 46, stat: 86 };
+// Percentages, not pixels. In a 346px two-column card the old pixel widths
+// totalled 402px, leaving the name column -56px — and under table-layout:fixed
+// that collapses to one character per line instead of merely cramping. These
+// hold at any card width and renormalise when mobile drops three columns.
+const W = { name: 40, calls: 9, talk: 9, tix: 7, subs: 7, doc: 7, uw: 7, stat: 14 };
 const CARD_PAD = 12;
 const headCell = (txt: string, w: number, padRight = 0, cls = "") =>
-  `<td width="${w + padRight}" class="${cls}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
+  `<td width="${w}%" class="${cls}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
   + `line-height:1.2;color:#5f6b7a;letter-spacing:.6px;padding:0 ${padRight}px 6px 5px">${txt}</td>`;
 const headerRow = () =>
-  `<tr><td style="padding:0 0 6px ${CARD_PAD}px">&nbsp;</td>`
+  `<tr><td width="${W.name}%" style="padding:0 0 6px ${CARD_PAD}px">&nbsp;</td>`
   + headCell("CALLS", W.calls) + headCell("TALK", W.talk, 0, "mdrop") + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
   + headCell("DOC", W.doc, 0, "mdrop") + headCell("UW", W.uw, 0, "mdrop")
   + headCell("STATUS", W.stat, CARD_PAD) + `</tr>`;
@@ -286,7 +290,7 @@ function chip(mark: string, bg: string, ring: string, ink: string) {
 
 function aeRow(a: AE) {
   const num = (val: string, on: boolean, w: number, cls = "") =>
-    `<td width="${w}" class="${cls}" align="right" style="padding:4px 0 4px 5px;border-bottom:1px solid #f4f6fa">`
+    `<td width="${w}%" class="${cls}" align="right" style="padding:4px 0 4px 5px;border-bottom:1px solid #f4f6fa">`
     + (on
       ? `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${HIT_INK}">${val}</span>`
       : `<span style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#9aa4b2">${val}</span>`)
@@ -298,10 +302,10 @@ function aeRow(a: AE) {
       : a.gap
         ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
         : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
-  return `<tr><td style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
+  return `<tr><td width="${W.name}%" style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk, "mdrop") + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
     + num(String(a.doc), false, W.doc, "mdrop") + num(String(a.uw), false, W.uw, "mdrop")
-    + `<td width="${W.stat + CARD_PAD}" align="right" style="padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
+    + `<td width="${W.stat}%" align="right" style="padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
 /** What the team actually did today, across every row printed above it. Talk is
  *  minutes, so it sums; the others are counts. Sidelined rows contribute
@@ -311,18 +315,18 @@ function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number;
   const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }) => number) =>
     aes.reduce((t, a) => t + f(a), 0) + hidden.reduce((t, h) => t + f(h), 0);
   const cell = (v: number | string, w: number, cls = "") =>
-    `<td width="${w}" class="${cls}" align="right" style="padding:6px 0 6px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
+    `<td width="${w}%" class="${cls}" align="right" style="padding:6px 0 6px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
     + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
   return `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.7px;`
-    + `padding:6px 0 6px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
+    + `padding:6px 0 6px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}" width="${W.name}%">TEAM</td>`
     + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk, "mdrop")
     + cell(n(sum((a) => a.tix)), W.tix) + cell(n(sum((a) => a.subs)), W.subs)
     + cell(n(sum((a) => a.doc)), W.doc, "mdrop") + cell(n(sum((a) => a.uw)), W.uw, "mdrop")
-    + `<td width="${W.stat + CARD_PAD}" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
+    + `<td width="${W.stat}%" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
 }
 
 const sideRow = (s: { name: string; why: string }) =>
-  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
+  `<tr><td width="${W.name}%" style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
   + `<td colspan="7" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
 
 /** Daily stage targets for the dial row, team-wide. Calibrated against a full
@@ -560,7 +564,8 @@ export function renderDigest(
     dialPct?: boolean;
     /** How the pace colour rule is explained under the dials. */
     legend?: LegendStyle;
-    /** 1 stacks the team cards full width; 2 (the default) runs them two across. */
+    /** 1 (the default) stacks the team cards full width; 2 runs them two across.
+     *  Two across cannot carry all seven metric columns legibly. */
     columns?: 1 | 2;
   },
 ): Digest {
@@ -667,7 +672,7 @@ export function renderDigest(
   // which the BY TEAM standings above have already ranked.
   const cost = (g: Team) => g.aes.length + g.sidelined.length + 2;
   let cards: string;
-  if (opts.columns === 1) {
+  if ((opts.columns || 1) === 1) {
     cards = teams.map((g) => `<tr><td style="padding:0 0 10px">${teamCard(g)}</td></tr>`).join("");
   } else {
     const colA: Team[] = [], colB: Team[] = [];
