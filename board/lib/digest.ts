@@ -264,15 +264,15 @@ function bar(pct: number, color: string, w: number | "100%", h: number) {
 // totalled 402px, leaving the name column -56px — and under table-layout:fixed
 // that collapses to one character per line instead of merely cramping. These
 // hold at any card width and renormalise when mobile drops three columns.
-const W = { name: 40, calls: 9, talk: 9, tix: 7, subs: 7, doc: 7, uw: 7, stat: 14 };
+const W = { name: 36, calls: 10, talk: 10, tix: 7, subs: 7, doc: 7, uw: 7, stat: 15 };
 const CARD_PAD = 12;
 const headCell = (txt: string, w: number, padRight = 0, cls = "") =>
-  `<td width="${w}%" class="${cls}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
+  `<td width="${w}%" class="mhead ${cls}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
   + `line-height:1.2;color:#5f6b7a;letter-spacing:.6px;padding:0 ${padRight}px 6px 5px">${txt}</td>`;
 const headerRow = () =>
   `<tr><td width="${W.name}%" style="padding:0 0 6px ${CARD_PAD}px">&nbsp;</td>`
-  + headCell("CALLS", W.calls) + headCell("TALK", W.talk, 0, "mdrop") + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
-  + headCell("DOC", W.doc, 0, "mdrop") + headCell("UW", W.uw, 0, "mdrop")
+  + headCell("CALLS", W.calls) + headCell("TALK", W.talk) + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
+  + headCell("DOC", W.doc) + headCell("UW", W.uw)
   + headCell("STATUS", W.stat, CARD_PAD) + `</tr>`;
 
 /** The board's own language for a hit, carried across verbatim: the metric that
@@ -303,8 +303,8 @@ function aeRow(a: AE) {
         ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
         : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
   return `<tr><td width="${W.name}%" style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
-    + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk, "mdrop") + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
-    + num(String(a.doc), false, W.doc, "mdrop") + num(String(a.uw), false, W.uw, "mdrop")
+    + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk) + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
+    + num(String(a.doc), false, W.doc) + num(String(a.uw), false, W.uw)
     + `<td width="${W.stat}%" align="right" style="padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
 /** What the team actually did today, across every row printed above it. Talk is
@@ -319,9 +319,9 @@ function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number;
     + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
   return `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.7px;`
     + `padding:6px 0 6px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}" width="${W.name}%">TEAM</td>`
-    + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk, "mdrop")
+    + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk)
     + cell(n(sum((a) => a.tix)), W.tix) + cell(n(sum((a) => a.subs)), W.subs)
-    + cell(n(sum((a) => a.doc)), W.doc, "mdrop") + cell(n(sum((a) => a.uw)), W.uw, "mdrop")
+    + cell(n(sum((a) => a.doc)), W.doc) + cell(n(sum((a) => a.uw)), W.uw)
     + `<td width="${W.stat}%" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
 }
 
@@ -767,6 +767,7 @@ export function renderDigest(
     + `.mstack{display:block !important;width:100% !important;text-align:left !important}`
     + `.mcenter{text-align:center !important;padding-left:0 !important}`
     + `.mleft table{margin:6px 0 0 !important}`
+    + `.mhead{font-size:8.5px !important;letter-spacing:0 !important}`
     + `}</style>`
     + `<title>${esc(opts.sendLabel)} daily goal</title></head>`
     + `<body style="margin:0;padding:0;background:${PAGE}">`
