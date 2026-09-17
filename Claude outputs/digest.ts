@@ -252,10 +252,9 @@ const tone = (p: number) => (p >= 75 ? GRN : p >= 40 ? "#c08a1a" : "#a8443c");
 /** A bar drawn from two table cells — the only kind Outlook renders reliably. */
 function bar(pct: number, color: string, w: number | "100%", h: number) {
   const fill = Math.max(2, Math.min(100, Math.round(pct)));
-  const attrs = w === "100%"
-    ? `width="100%" style="width:100%;border-collapse:collapse"`
-    : `width="${w}" style="width:${w}px;border-collapse:collapse"`;
-  return tbl(attrs,
+  const width = w === "100%" ? `width="100%" style="width:100%;border-collapse:collapse"`
+                             : `width="${w}" style="width:${w}px;border-collapse:collapse"`;
+  return tbl(width,
     `<tr><td height="${h}" bgcolor="${color}" style="height:${h}px;width:${fill}%;font-size:0;line-height:0">&nbsp;</td>`
     + `<td height="${h}" bgcolor="#dce3ec" style="height:${h}px;font-size:0;line-height:0">&nbsp;</td></tr>`);
 }
@@ -286,9 +285,9 @@ function chip(mark: string, bg: string, ring: string, ink: string) {
 
 function aeRow(a: AE) {
   const num = (val: string, on: boolean, w: number, cls = "") =>
-    `<td width="${w}" class="${cls}" align="right" style="padding:4px 0 4px 5px;border-bottom:1px solid #f4f6fa">`
+    `<td width="${w}" class="${cls}" align="right" style="padding:7px 0 7px 5px;border-bottom:1px solid #f4f6fa">`
     + (on
-      ? `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${HIT_INK}">${val}</span>`
+      ? `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${HIT_INK}" class="mnum">${val}</span>`
       : `<span style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#9aa4b2">${val}</span>`)
     + `</td>`;
   const stat = a.all4
@@ -298,10 +297,10 @@ function aeRow(a: AE) {
       : a.gap
         ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
         : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
-  return `<tr><td style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
+  return `<tr><td class="mname" style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:7px 0 7px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk, "mdrop") + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
     + num(String(a.doc), false, W.doc, "mdrop") + num(String(a.uw), false, W.uw, "mdrop")
-    + `<td width="${W.stat + CARD_PAD}" align="right" style="padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
+    + `<td width="${W.stat + CARD_PAD}" align="right" style="padding:7px ${CARD_PAD}px 7px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
 /** What the team actually did today, across every row printed above it. Talk is
  *  minutes, so it sums; the others are counts. Sidelined rows contribute
@@ -311,10 +310,10 @@ function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number;
   const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }) => number) =>
     aes.reduce((t, a) => t + f(a), 0) + hidden.reduce((t, h) => t + f(h), 0);
   const cell = (v: number | string, w: number, cls = "") =>
-    `<td width="${w}" class="${cls}" align="right" style="padding:6px 0 6px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
+    `<td width="${w}" class="${cls}" align="right" style="padding:8px 0 8px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
     + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
   return `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.7px;`
-    + `padding:6px 0 6px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
+    + `padding:8px 0 8px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
     + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk, "mdrop")
     + cell(n(sum((a) => a.tix)), W.tix) + cell(n(sum((a) => a.subs)), W.subs)
     + cell(n(sum((a) => a.doc)), W.doc, "mdrop") + cell(n(sum((a) => a.uw)), W.uw, "mdrop")
@@ -322,8 +321,8 @@ function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number;
 }
 
 const sideRow = (s: { name: string; why: string }) =>
-  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
-  + `<td colspan="7" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:4px ${CARD_PAD}px 4px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
+  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:7px 0 7px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
+  + `<td colspan="7" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:7px ${CARD_PAD}px 7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
 
 /** Daily stage targets for the dial row, team-wide. Calibrated against a full
  *  day's export (Tue 9/15: 18 subs, 13 into doc check, 12 into underwriting). */
@@ -402,19 +401,20 @@ export function dialSpecs(b: BoardData, pace = 1): DialSpec[] {
   });
 }
 
+
 /** One row of equal tiles that wraps when the screen is too narrow for them all.
- *  A table cell can never wrap, which is why these are inline-block divs: the
- *  reflow costs no media query and so survives clients that strip <style>.
- *  Word's engine ignores inline-block, so ghost cells keep it side by side. */
-function strip(cells: string[], maxW: number, floorW = 132): string {
+ *  `mso` ghost cells keep Word's engine rendering them side by side. */
+function strip(cells: string[], minW: number): string {
   const pct = Math.floor(100 / cells.length);
+  const ghostOpen = `<!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><![endif]-->`;
+  const ghostClose = `<!--[if mso]></tr></table><![endif]-->`;
   return `<div style="font-size:0;line-height:0;text-align:center">`
-    + `<!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><![endif]-->`
+    + ghostOpen
     + cells.map((c) =>
         `<!--[if mso]><td width="${pct}%" valign="top"><![endif]-->`
-        + `<div style="display:inline-block;vertical-align:top;width:100%;max-width:${maxW}px;min-width:${floorW}px">${c}</div>`
+        + `<div style="display:inline-block;vertical-align:top;width:100%;max-width:${minW}px;min-width:132px">${c}</div>`
         + `<!--[if mso]></td><![endif]-->`).join("")
-    + `<!--[if mso]></tr></table><![endif]-->`
+    + ghostClose
     + `</div>`;
 }
 
@@ -722,12 +722,12 @@ export function renderDigest(
     + `</td></tr>`
     + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border-left:1px solid ${LINE};border-right:1px solid ${LINE};padding:14px 0 0">`
     + tbl(`width="100%" bgcolor="${band.bg}" style="background:${band.bg};border-top:1px solid ${band.line};border-bottom:1px solid ${band.line}"`,
-      `<tr><td class="mstack mcenter" style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.8px;padding:10px 0 4px 14px;white-space:nowrap;width:120px">ALL TEAMS</td>`
-      + `<td class="mstack" style="padding:4px 12px 10px 0">`
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.8px;padding:10px 0 10px 14px;white-space:nowrap">ALL TEAMS</td>`
+      + `<td style="padding:10px 12px 10px 0">`
       + strip(allAEs.map((x) =>
           `<div style="padding:0 4px">`
           + `<div style="font-family:${F};font-size:9px;font-weight:700;line-height:1.2;color:${band.ink};letter-spacing:.7px">${x.label}</div>`
-          + `<div style="font-family:${F};font-size:17px;font-weight:800;line-height:1.25;color:${INK};letter-spacing:-.3px">${n(x.value)}</div></div>`), 150, 74)
+          + `<div style="font-family:${F};font-size:17px;font-weight:800;line-height:1.25;color:${INK};letter-spacing:-.3px">${n(x.value)}</div></div>`), 150)
       + `</td></tr>`)
     + `</td></tr>`
     + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;height:10px;line-height:10px;font-size:0">&nbsp;</td></tr>`
@@ -756,13 +756,27 @@ export function renderDigest(
   const html = `<!doctype html><html><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">`
-    + `<style>@media only screen and (max-width:620px){`
-    + `.mdrop{display:none !important;width:0 !important;max-width:0 !important;padding:0 !important;`
-    + `font-size:0 !important;line-height:0 !important;overflow:hidden !important}`
+    // Gmail has honoured embedded styles and media queries since 2016, as have
+    // Apple Mail and iOS. Where they are stripped the email still renders — the
+    // client just scales the full-width layout down, which is the behaviour we
+    // had before. So everything here is an improvement, never a dependency.
+    + `<style>`
+    + `@media only screen and (max-width:620px){`
+    // Three columns go on a phone. Talk time, doc check and underwriting are the
+    // least glanced-at of the seven, and dropping them takes the row from eight
+    // cells to five — enough that the rest can be read without pinching.
+    + `.mdrop{display:none !important;width:0 !important;max-width:0 !important;`
+    + `padding:0 !important;font-size:0 !important;line-height:0 !important;overflow:hidden !important}`
+    // Four-across strips become two-by-two.
+    + `.mhalf{display:block !important;width:50% !important;max-width:50% !important;`
+    + `float:left !important;box-sizing:border-box !important}`
+    + `.mname{font-size:14px !important}`
+    + `.mnum{font-size:14px !important}`
+    + `.mpad{padding-left:10px !important;padding-right:10px !important}`
     + `.mstack{display:block !important;width:100% !important;text-align:left !important}`
-    + `.mcenter{text-align:center !important;padding-left:0 !important}`
     + `.mleft table{margin:6px 0 0 !important}`
-    + `}</style>`
+    + `}`
+    + `</style>`
     + `<title>${esc(opts.sendLabel)} daily goal</title></head>`
     + `<body style="margin:0;padding:0;background:${PAGE}">`
     + `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>`
