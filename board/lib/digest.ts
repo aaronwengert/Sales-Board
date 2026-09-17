@@ -15,7 +15,7 @@ const PAGE_W = 700;
 const CALLS_GOAL = 75, TALK_GOAL = 90, SUB_GOAL = 1, TIX_GOAL = 3;
 
 const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const INK = "#17233d", MUT = "#6b7686", LINE = "#dfe5ee", GRN = "#127a3c", PAGE = "#eef1f6";
+const INK = "#17233d", MUT = "#6b7686", LINE = "#d9e0ea", GRN = "#127a3c", PAGE = "#ffffff";
 
 type AE = {
   name: string; calls: number; talk: number; tix: number; subs: number;
@@ -157,6 +157,14 @@ export function digestLeaders(b: BoardData, teams: Team[]): Leader[] {
 }
 
 const GOLD = "#9a7a10", GOLD_BG = "#fdf6dd", GOLD_LINE = "#e8d38f";
+export const BANDS: Record<string, { bg: string; line: string; ink: string }> = {
+  mint:  { bg: "#e3f0e7", line: "#c6e0d0", ink: "#5b6674" },
+  sage:  { bg: "#dbe8de", line: "#b9d2c1", ink: "#44584c" },
+  slate: { bg: "#e7edf4", line: "#ccd8e6", ink: "#54606f" },
+  sand:  { bg: "#f2ede1", line: "#ded2ba", ink: "#645b48" },
+  stone: { bg: "#eceff2", line: "#d3dae1", ink: "#5b6674" },
+  deep:  { bg: "#cfe2d6", line: "#a8c7b4", ink: "#2f4a3a" },
+};
 
 /** The leaders band. Gold is deliberate: on the board gold already means
  *  "did something exceptional", so it carries the same meaning here. */
@@ -224,6 +232,9 @@ const TILE_H = 86;
     + `</td></tr>`;
 }
 
+/** 1345 -> 1,345. Four-figure call counts are unreadable without it. */
+const n = (v: number | string) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const tbl = (attrs: string, inner: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" border="0" ${attrs}>${inner}</table>`;
@@ -276,6 +287,21 @@ function aeRow(a: AE) {
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk) + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
     + `<td width="${W.stat}" align="right" style="padding:7px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
+/** What the team actually did today, across every row printed above it. Talk is
+ *  minutes, so it sums; the others are counts. Sidelined rows contribute
+ *  nothing because they have nothing to contribute. */
+function totalRow(aes: AE[], band: { bg: string; line: string; ink: string }) {
+  const sum = (f: (a: AE) => number) => aes.reduce((t, a) => t + f(a), 0);
+  const cell = (v: number | string, w: number) =>
+    `<td width="${w}" align="right" style="padding:8px 0 8px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
+    + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
+  return `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.7px;`
+    + `padding:8px 0 8px 6px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
+    + cell(n(sum((a) => a.calls)), W.calls) + cell(n(sum((a) => a.talk)), W.talk)
+    + cell(n(sum((a) => a.tix)), W.tix) + cell(n(sum((a) => a.subs)), W.subs)
+    + `<td width="${W.stat}" style="background:${band.bg};border-top:1px solid ${band.line}">&nbsp;</td></tr>`;
+}
+
 const sideRow = (s: { name: string; why: string }) =>
   `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
   + `<td colspan="5" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
@@ -355,7 +381,7 @@ function dialsBlock(b: BoardData, src?: Partial<Record<DialSpec["key"], string>>
   }).join("");
   return `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:18px 12px 18px">`
     + tbl(`width="100%"`,
-      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTION</td></tr>`)
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTIVITY</td></tr>`)
     + tbl(`width="100%"`, `<tr>${cells}</tr>`)
     + `</td></tr>`;
 }
@@ -400,6 +426,8 @@ export function renderDigest(
      *  even when remote images are blocked), "data:..." for a preview, or an
      *  absolute https URL. Omitted keys fall back to the drawn ring. */
     dialSrc?: Partial<Record<DialSpec["key"], string>>;
+    /** Which shade the team header and totals band wear. See BANDS. */
+    band?: keyof typeof BANDS;
   },
 ): Digest {
   const { teams, hit, total, pct } = digestTeams(b);
@@ -407,6 +435,14 @@ export function renderDigest(
   const leaders = digestLeaders(b, teams);
   const leader = teams[0];
   const url = opts.boardUrl || "#";
+  const band = BANDS[opts.band || "stone"];
+  const everyone = teams.flatMap((g) => g.aes);
+  const allAEs = [
+    { label: "CALLS", value: everyone.reduce((t, a) => t + a.calls, 0) },
+    { label: "TALK MIN", value: everyone.reduce((t, a) => t + a.talk, 0) },
+    { label: "TICKETS", value: everyone.reduce((t, a) => t + a.tix, 0) },
+    { label: "SUBS", value: everyone.reduce((t, a) => t + a.subs, 0) },
+  ];
 
   const logos = opts.photos?.logos || {};
   const logoStyle = opts.logoStyle || (Object.keys(logos).length ? "after-rank" : "off");
@@ -440,7 +476,10 @@ export function renderDigest(
     }
     const span = logoStyle === "off" ? 4 : 5;
     lb += `<tr>` + cells
-      + `<td style="font-family:${F};font-size:13.5px;font-weight:600;line-height:1.3;color:${INK};padding:8px 0 8px 8px">${esc(g.team)}</td>`
+      + `<td style="padding:8px 0 8px 8px">`
+      + `<span style="font-family:${F};font-size:13.5px;font-weight:700;line-height:1.3;color:${INK}">${esc(g.team)}</span>`
+      + (g.manager ? `<span style="font-family:${F};font-size:11px;font-weight:400;line-height:1.3;color:#8792a1">&nbsp;&nbsp;${esc(g.manager)}</span>` : "")
+      + `</td>`
       + `<td width="140" style="padding:8px 12px 8px 0">${bar(g.pct, c, 140, 7)}</td>`
       + `<td width="54" align="right" style="font-family:${F};font-size:13.5px;font-weight:700;line-height:1.3;color:${c};padding:8px 0">${g.pct}%</td>`
       + `<td width="48" align="right" style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:${MUT};padding:8px 0">${g.hit}/${g.n}</td></tr>`;
@@ -455,7 +494,7 @@ export function renderDigest(
   const teamPhotos = opts.photos?.teams || {};
   const teamCard = (g: Team) => {
     const c = tone(g.pct);
-    const rows = headerRow() + g.aes.map(aeRow).join("") + g.sidelined.map(sideRow).join("");
+    const rows = headerRow() + g.aes.map(aeRow).join("") + g.sidelined.map(sideRow).join("") + totalRow(g.aes, band);
     const tp = teamPhotos[g.team];
     const pstyle = opts.teamPhotoStyle || "thumb";
     const clean = g.n > 0 && g.hit === g.n;
@@ -471,13 +510,13 @@ export function renderDigest(
       : "";
     return tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
       bnr
-      + `<tr><td bgcolor="#eef2f7" style="background:#eef2f7;padding:10px 12px 9px;border-bottom:2px solid ${c}">`
+      + `<tr><td bgcolor="${band.bg}" style="background:${band.bg};padding:10px 12px 9px;border-bottom:2px solid ${c}">`
       + tbl(`width="100%"`,
         `<tr>${shot}${logoCell}<td valign="middle" style="padding-left:${shot || logoCell ? 4 : 0}px">`
         + `<div style="font-family:${F};font-size:14px;font-weight:800;line-height:1.2;color:${INK};letter-spacing:-.2px">${esc(g.team)}`
         + (clean ? ` <span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#0b5c2c;background:#d6f0e0;padding:2px 6px;letter-spacing:.4px">&#10003; ALL IN</span>` : "")
         + `</div>`
-        + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#7b8698;padding-top:1px">${esc(g.manager)}</div>` : "")
+        + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#6f7d8c;padding-top:1px">${esc(g.manager)}</div>` : "")
         + `</td>`
         + `<td align="right" valign="middle" width="46" style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${clean ? GRN : c};white-space:nowrap">${g.hit}/${g.n}</td></tr>`)
       + `</td></tr><tr><td style="padding:8px 12px 10px">${tbl(`width="100%"`, rows)}</td></tr>`);
@@ -531,6 +570,13 @@ export function renderDigest(
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding-bottom:2px">BY TEAM</td>`
       + `<td align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.2;color:#98a2b1;letter-spacing:.7px;padding-bottom:2px">HIT RATE</td></tr>`)
     + tbl(`width="100%"`, lb)
+    + `<div style="height:14px;line-height:14px;font-size:0">&nbsp;</div>`
+    + tbl(`width="100%" bgcolor="${band.bg}" style="background:${band.bg};border:1px solid ${band.line}"`,
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};letter-spacing:.8px;padding:10px 0 10px 12px">ALL TEAMS</td>`
+      + allAEs.map((x) => `<td width="108" align="right" style="padding:10px 0">`
+        + `<div style="font-family:${F};font-size:9px;font-weight:700;line-height:1.2;color:${band.ink};letter-spacing:.7px;opacity:.75">${x.label}</div>`
+        + `<div style="font-family:${F};font-size:17px;font-weight:800;line-height:1.25;color:${INK};letter-spacing:-.3px">${n(x.value)}</div></td>`).join("")
+      + `<td width="14">&nbsp;</td></tr>`)
     + `</td></tr>`
     + (leaderStyle === "off" ? "" :
         `<tr><td style="padding:16px 0 8px;font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px">TODAY&rsquo;S BEST</td></tr>`
@@ -544,7 +590,16 @@ export function renderDigest(
     + `Figures from the ${esc(b.callsUpdatedLabel || "—")} call file and the ${esc(b.updatedLabel || "—")} production file. `
     + `<a href="${url}" style="color:${GRN};font-weight:600;text-decoration:none">Open the board &rsaquo;</a></td></tr>`;
 
-  const preheader = `${hit} of ${total} hit${leader ? ` · ${leader.team} leads` : ""}`;
+  // The four dials, in the order they appear on the page. A subject line has no
+  // room to label them, so the preheader — the grey text the inbox prints right
+  // after the subject — carries the key instead. Read together they say
+  // "1-4-0-34" then "Subs · Doc Check · UW · Tix", which teaches the order once
+  // and then stays out of the way.
+  const dials = dialSpecs(b);
+  const indicators = dials.map((d) => (d.pending ? "\u2013" : d.value)).join("/");
+  const preheader = `${dials.map((d) => d.label.replace("DOC CHECK", "Doc Check")
+    .replace("SUBS", "Subs").replace("UW", "UW").replace("TIX", "Tix")).join(" \u00b7 ")}`
+;
   const html = `<!doctype html><html><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">`
@@ -556,5 +611,5 @@ export function renderDigest(
       + tbl(`width="${PAGE_W}" style="width:${PAGE_W}px;max-width:${PAGE_W}px"`, inner) + `</td></tr>`)
     + `</body></html>`;
 
-  return { subject: `Daily goal ${opts.sendLabel} — ${hit} of ${total} hit (${pct}%)`, preheader, html };
+  return { subject: `Leading Indicators ${opts.sendLabel} \u2014 ${indicators} \u2014 ${hit} of ${total}, ${pct}%`, preheader, html };
 }

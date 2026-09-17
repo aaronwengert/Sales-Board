@@ -65,7 +65,7 @@ function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 // GOAL_EXEMPT — TODAY data stays live on their row, but they are excluded
 //   from the goal % math the same way.
 const GOAL_DASH = new Set(["eric ferguson","adam martin","matthew cefalo","john giordano"]);
-const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
+const GOAL_EXEMPT = new Set(["joseph marino"]);
 
 // Why a GOAL_DASH row is exempt, in the person's own words rather than the
 // board's. The TODAY group prints this instead of the daily numbers, which
