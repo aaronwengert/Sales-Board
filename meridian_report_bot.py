@@ -255,6 +255,27 @@ def draw_dial(d: dict) -> bytes:
     return out.getvalue()
 
 
+def parse_recipients(raw) -> list[str]:
+    """Split however the addresses were given.
+
+    A test send is typed by hand under time pressure, so every plausible
+    separator is accepted rather than only the one documented somewhere.
+    """
+    import re
+    if not raw:
+        return []
+    parts = raw if isinstance(raw, list) else [raw]
+    out: list[str] = []
+    for p in parts:
+        out.extend(x for x in re.split(r"[,;\s]+", str(p).strip()) if x)
+    seen, uniq = set(), []
+    for a in out:
+        if a.lower() not in seen:
+            seen.add(a.lower())
+            uniq.append(a)
+    return uniq
+
+
 def fetch_digest(cfg: dict) -> dict:
     d = cfg["digest"]
     key = os.environ.get("REPORT_KEY", d.get("key", ""))
@@ -327,7 +348,8 @@ def main() -> int:
     ap.add_argument("--digest", action="store_true",
                     help="send the daily-goal digest instead of the CSV export")
     ap.add_argument("--to", action="append", default=None,
-                    help="override the digest recipients (repeatable); implies a test send")
+                    help="override the digest recipients (repeatable, or one comma-separated "
+                         "list); implies a test send. DIGEST_TO does the same from the environment")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -341,17 +363,20 @@ def main() -> int:
         except Exception:
             log.exception("Digest fetch failed.")
             return 1
-        if payload.get("skip") and not args.force and not args.to:
+        if payload.get("skip") and not args.force and not to:
             log.info("Digest skipped (%s).", payload.get("reason") or "board said so")
             return 0
+        to = parse_recipients(args.to) or parse_recipients(os.environ.get("DIGEST_TO"))
         if args.dry_run:
             out = BASE_DIR / "digest_preview.html"
             out.write_text(payload["html"], encoding="utf-8")
             log.info("Dry run: wrote %s (%s)", out, payload["subject"])
             return 0
         try:
-            send_digest(cfg, payload, to=args.to,
-                        subject_prefix="[TEST] " if args.to else "")
+            if to:
+                log.info("Test send to %d recipient(s): %s", len(to), ", ".join(to))
+            send_digest(cfg, payload, to=to or None,
+                        subject_prefix="[TEST] " if to else "")
         except Exception:
             log.exception("Digest send failed.")
             return 1
