@@ -20,7 +20,7 @@ const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
   "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Zia Hasso","Michael Blaschuk","Dalton Phillips","William Boucher"] },
   "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby","Djimon Colbert","Joseph Marino"] },
   "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Ryan Matyniak","Benjamin Martin","Logan Kincade","Mari Woods","Jackson Miles"] },
-  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan"] },
+  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
   "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins"] },
@@ -140,12 +140,18 @@ const FUND = new Set(["funded","loan shipped","in purchase review","in final pur
 function norm(s: string) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); }
 // Identity aliases: fold two spellings of the same person onto one canonical
 // key so their production, calls, and tickets combine on a single row.
-const ALIAS: Record<string, string> = { "alfredo sanchez": "alfredo sanchez ii" };
+// The export spells him both ways; the roster spelling wins.
+const ALIAS: Record<string, string> = { "alfredo sanchez ii": "alfredo sanchez" };
 function nkey(s: string) { const n = norm(s); return ALIAS[n] || n; }
 const NAME2TEAM: Record<string, string> = {};
 const NAME2DISPLAY: Record<string, string> = {};
 const TEAM2CH: Record<string, Channel> = {};
 for (const [t, d] of Object.entries(TEAMS)) { TEAM2CH[t] = d.channel; for (const a of d.aes) { NAME2TEAM[norm(a)] = t; NAME2DISPLAY[norm(a)] = a; } }
+// Every alias resolves to the same team and spelling as its canonical name.
+for (const [variant, canonical] of Object.entries(ALIAS)) {
+  if (NAME2TEAM[canonical]) NAME2TEAM[variant] = NAME2TEAM[canonical];
+  if (NAME2DISPLAY[canonical]) NAME2DISPLAY[variant] = NAME2DISPLAY[canonical];
+}
 function teamFor(ae: string) { return NAME2TEAM[norm(ae)] || ""; }
 // Canonical display spelling: the production export sometimes drops punctuation
 // (e.g. "DaShann Austin" vs the roster's "Da'Shann Austin") or uses a name

@@ -12,13 +12,21 @@
 // something the sent mail does not.
 
 import type { DialSpec } from "./digest";
+/** Must match BANDS.stone.bg in digest.ts — the strip the dials sit on.
+ *  Kept as a literal so this module stays a leaf with no runtime imports. */
+export const DIAL_BG = "#eceff2";
 
 const SIZE = 224;              // 2x the 112px display size, for retina
 const R = 86, STROKE = 27;
 const CIRC = 2 * Math.PI * R;
 const FONT = "Helvetica Neue,Helvetica,Arial,sans-serif";
 
-export function dialSvg(d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" | "unit" | "color" | "track">): string {
+/** The strip the dials sit on is tinted, so the image has to be tinted too —
+ *  a white square around each donut is the giveaway that these are pictures. */
+export function dialSvg(
+  d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" | "unit" | "color" | "track">,
+  bg: string = DIAL_BG,
+): string {
   const frac = Math.max(0, Math.min(1, d.pct / 100));
   const on = (CIRC * frac).toFixed(2);
   const off = (CIRC - +on).toFixed(2);
@@ -30,7 +38,7 @@ export function dialSvg(d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" |
     : "";
   const num = d.pending ? "&#8211;" : String(d.value);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">`
-    + `<rect width="${SIZE}" height="${SIZE}" fill="#ffffff"/>`
+    + `<rect width="${SIZE}" height="${SIZE}" fill="${bg}"/>`
     + `<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${d.track}" stroke-width="${STROKE}"/>`
     + arc
     + `<text x="${c}" y="${c + 6}" text-anchor="middle" font-family="${FONT}" font-size="58" font-weight="700"`
@@ -41,8 +49,8 @@ export function dialSvg(d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" |
 }
 
 /** Browser-renderable source for the preview. */
-export function dialDataUri(d: Parameters<typeof dialSvg>[0]): string {
-  const svg = dialSvg(d);
+export function dialDataUri(d: Parameters<typeof dialSvg>[0], bg: string = DIAL_BG): string {
+  const svg = dialSvg(d, bg);
   const b64 = typeof Buffer !== "undefined"
     ? Buffer.from(svg, "utf8").toString("base64")
     : btoa(unescape(encodeURIComponent(svg)));

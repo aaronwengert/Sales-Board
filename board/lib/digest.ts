@@ -11,7 +11,7 @@
 
 import type { BoardData } from "./board";
 
-const PAGE_W = 700;
+const PAGE_W = 760;
 const CALLS_GOAL = 75, TALK_GOAL = 90, SUB_GOAL = 1, TIX_GOAL = 3;
 
 const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -29,7 +29,7 @@ type AE = {
    *  a hit the denominator never counted. */
   exempt: boolean;
 };
-type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; manager: string | null; hit: number; n: number; pct: number };
+type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hidden: { calls: number; talk: number; tix: number; subs: number }[]; manager: string | null; hit: number; n: number; pct: number };
 
 /** Team rollups, using exactly the board's inclusion rules. */
 export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: number; pct: number } {
@@ -39,15 +39,21 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
 
   for (const r of b.rows) {
     const name = r[0], team = teamOf(r[1]);
-    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], manager: null, hit: 0, n: 0, pct: 0 });
+    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0 });
     const g = byTeam.get(team)!;
-    if (ooo.has(name)) { g.sidelined.push({ name, why: "Out of office" }); continue; }
+    const raw = b.today[name] || [0, 0, 0];
+    const asHidden = () => g.hidden.push({
+      calls: raw[0], talk: Math.round(raw[1]), tix: b.tix[name] || 0, subs: raw[2],
+    });
+    if (ooo.has(name)) { g.sidelined.push({ name, why: "Out of office" }); asHidden(); continue; }
     if (dash.has(name)) {
       const role = b.roles?.[name];
       // A sales manager is named once in the card header, by the roster map
-      // below, and never as a dashed row among the people he manages.
-      if (role === "Sales Manager") continue;
+      // below, and never as a dashed row among the people he manages. His
+      // production still lands in the team total.
+      if (role === "Sales Manager") { asHidden(); continue; }
       g.sidelined.push({ name, why: role || "Not scored" });
+      asHidden();
       continue;
     }
     const isExempt = exempt.has(name);
@@ -224,7 +230,7 @@ const TILE_H = 86;
         + face
         + `<div style="font-family:${F};font-size:8.5px;font-weight:700;line-height:1.2;color:${dim ? "#98a2b1" : ac};letter-spacing:.7px">${!dim && gold ? "\u2605 " : ""}${l.label}</div>`
         + `<div style="font-family:${F};font-size:23px;font-weight:800;line-height:1.15;color:${dim ? "#c3cbd6" : gold ? "#7a5f0c" : ac};letter-spacing:-.5px;padding:5px 0 3px">${l.value}</div>`
-        + `<div style="font-family:${F};font-size:11px;font-weight:600;line-height:1.3;color:${INK}">${who}</div>${tie}</td></tr>`)
+        + `<div style="font-family:${F};font-size:13.5px;font-weight:700;line-height:1.3;color:${INK}">${who}</div>${tie}</td></tr>`)
       + `</td>`;
   };
   return `<tr><td style="padding:0 0 6px">`
@@ -290,8 +296,10 @@ function aeRow(a: AE) {
 /** What the team actually did today, across every row printed above it. Talk is
  *  minutes, so it sums; the others are counts. Sidelined rows contribute
  *  nothing because they have nothing to contribute. */
-function totalRow(aes: AE[], band: { bg: string; line: string; ink: string }) {
-  const sum = (f: (a: AE) => number) => aes.reduce((t, a) => t + f(a), 0);
+function totalRow(aes: AE[], hidden: { calls: number; talk: number; tix: number; subs: number }[],
+                  band: { bg: string; line: string; ink: string }) {
+  const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number }) => number) =>
+    aes.reduce((t, a) => t + f(a), 0) + hidden.reduce((t, h) => t + f(h), 0);
   const cell = (v: number | string, w: number) =>
     `<td width="${w}" align="right" style="padding:8px 0 8px 5px;background:${band.bg};border-top:1px solid ${band.line}">`
     + `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK}">${v}</span></td>`;
@@ -359,7 +367,7 @@ export function dialSpecs(b: BoardData): DialSpec[] {
 
 const DIAL_PX = 112;
 
-function dialsBlock(b: BoardData, src?: Partial<Record<DialSpec["key"], string>>): string {
+function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string }, src?: Partial<Record<DialSpec["key"], string>>): string {
   const cells = dialSpecs(b).map((d) => {
     const url = src?.[d.key];
     const art = url
@@ -379,7 +387,7 @@ function dialsBlock(b: BoardData, src?: Partial<Record<DialSpec["key"], string>>
       + `<div style="font-family:${F};font-size:10px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:.9px">${d.label}</div>`
       + `</td>`;
   }).join("");
-  return `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:18px 12px 18px">`
+  return `<tr><td bgcolor="${band.bg}" style="background:${band.bg};border:1px solid ${band.line};border-top:0;padding:18px 12px 18px">`
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTIVITY</td></tr>`)
     + tbl(`width="100%"`, `<tr>${cells}</tr>`)
@@ -436,12 +444,14 @@ export function renderDigest(
   const leader = teams[0];
   const url = opts.boardUrl || "#";
   const band = BANDS[opts.band || "stone"];
-  const everyone = teams.flatMap((g) => g.aes);
+  const everyone = [...teams.flatMap((g) => g.aes), ...teams.flatMap((g) => g.hidden)];
+  const tot = (f: (a: { calls: number; talk: number; tix: number; subs: number }) => number) =>
+    everyone.reduce((t, a) => t + f(a), 0);
   const allAEs = [
-    { label: "CALLS", value: everyone.reduce((t, a) => t + a.calls, 0) },
-    { label: "TALK MIN", value: everyone.reduce((t, a) => t + a.talk, 0) },
-    { label: "TICKETS", value: everyone.reduce((t, a) => t + a.tix, 0) },
-    { label: "SUBS", value: everyone.reduce((t, a) => t + a.subs, 0) },
+    { label: "CALLS", value: tot((a) => a.calls) },
+    { label: "TALK MIN", value: tot((a) => a.talk) },
+    { label: "TICKETS", value: tot((a) => a.tix) },
+    { label: "SUBS", value: tot((a) => a.subs) },
   ];
 
   const logos = opts.photos?.logos || {};
@@ -494,7 +504,7 @@ export function renderDigest(
   const teamPhotos = opts.photos?.teams || {};
   const teamCard = (g: Team) => {
     const c = tone(g.pct);
-    const rows = headerRow() + g.aes.map(aeRow).join("") + g.sidelined.map(sideRow).join("") + totalRow(g.aes, band);
+    const rows = headerRow() + g.aes.map(aeRow).join("") + g.sidelined.map(sideRow).join("") + totalRow(g.aes, g.hidden, band);
     const tp = teamPhotos[g.team];
     const pstyle = opts.teamPhotoStyle || "thumb";
     const clean = g.n > 0 && g.hit === g.n;
@@ -558,7 +568,7 @@ export function renderDigest(
       + `<td align="right" style="font-family:${F};font-size:12px;font-weight:600;line-height:1.2;color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</td></tr>`)
     + `</td></tr>`
     + banner
-    + dialsBlock(b, opts.dialSrc)
+    + dialsBlock(b, band, opts.dialSrc)
     + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:22px 20px 18px">`
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:46px;font-weight:800;line-height:1;color:${INK};letter-spacing:-1.5px;white-space:nowrap">${hit}<span style="font-size:26px;font-weight:600;color:${MUT}"> of ${total}</span></td>`
