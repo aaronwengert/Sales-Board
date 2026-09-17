@@ -264,11 +264,12 @@ function bar(pct: number, color: string, w: number | "100%", h: number) {
 // totalled 402px, leaving the name column -56px — and under table-layout:fixed
 // that collapses to one character per line instead of merely cramping. These
 // hold at any card width and renormalise when mobile drops three columns.
-const W = { name: 36, calls: 10, talk: 10, tix: 7, subs: 7, doc: 7, uw: 7, stat: 15 };
+const W = { name: 36, calls: 10, talk: 10, tix: 7, subs: 9, doc: 7, uw: 7, stat: 14 };
 const CARD_PAD = 12;
 const headCell = (txt: string, w: number, padRight = 0, cls = "") =>
-  `<td width="${w}%" class="mhead ${cls}" align="right" style="font-family:${F};font-size:9.5px;font-weight:800;`
-  + `line-height:1.2;color:#5f6b7a;letter-spacing:.6px;padding:0 ${padRight}px 6px 5px">${txt}</td>`;
+  `<td width="${w}%" class="mhead ${cls}" align="right" style="font-family:${F};font-size:8.5px;font-weight:800;`
+  + `line-height:1.2;color:#5f6b7a;letter-spacing:0;white-space:nowrap;`
+  + `padding:0 ${padRight}px 6px 3px">${txt}</td>`;
 const headerRow = () =>
   `<tr><td width="${W.name}%" style="padding:0 0 6px ${CARD_PAD}px">&nbsp;</td>`
   + headCell("CALLS", W.calls) + headCell("TALK", W.talk) + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
@@ -767,7 +768,6 @@ export function renderDigest(
     + `.mstack{display:block !important;width:100% !important;text-align:left !important}`
     + `.mcenter{text-align:center !important;padding-left:0 !important}`
     + `.mleft table{margin:6px 0 0 !important}`
-    + `.mhead{font-size:8.5px !important;letter-spacing:0 !important}`
     + `}</style>`
     + `<title>${esc(opts.sendLabel)} daily goal</title></head>`
     + `<body style="margin:0;padding:0;background:${PAGE}">`
