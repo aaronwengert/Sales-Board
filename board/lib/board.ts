@@ -85,7 +85,8 @@ const ROLES: Record<string, string> = {
 // old would otherwise show as a solid column of red that says nothing except
 // "they started recently", which is not a performance signal and reads like one.
 const NO_TIER_TEAMS = new Set(["lien kings"]);
-const NO_TIER_AES = new Set(["keir buettner", "jacob andrew"]);
+const NO_TIER_AES = new Set(["keir buettner", "jacob andrew",
+  "dalton phillips", "jackson miles", "william boucher"]);
 // Transfers in from the dissolved Rainmakers. They inherit the Lien Kings'
 // unshaded pipeline, because a team-wide book still reads as one book, but they
 // are not new to the company and must not carry the NEW tag.

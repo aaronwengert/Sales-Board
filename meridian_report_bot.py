@@ -222,7 +222,7 @@ def draw_dial(d: dict) -> bytes:
     from PIL import Image, ImageDraw, ImageFont
 
     S, ss = DIAL_PX, 4
-    img = Image.new("RGB", (S * ss, S * ss), "white")
+    img = Image.new("RGB", (S * ss, S * ss), d.get("bg") or "#ffffff")
     dr = ImageDraw.Draw(img)
     box = [DIAL_PAD * ss, DIAL_PAD * ss, (S - DIAL_PAD) * ss, (S - DIAL_PAD) * ss]
     w = DIAL_RING * ss

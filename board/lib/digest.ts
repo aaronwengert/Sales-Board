@@ -316,7 +316,7 @@ const sideRow = (s: { name: string; why: string }) =>
 
 /** Daily stage targets for the dial row, team-wide. Calibrated against a full
  *  day's export (Tue 9/15: 18 subs, 13 into doc check, 12 into underwriting). */
-export const DIAL_GOALS = { subs: 30, docCheck: 30, uw: 30, tix: 60 };
+export const DIAL_GOALS = { subs: 30, docCheck: 30, uw: 20, tix: 60 };
 
 /** The four dials.
  *
@@ -342,17 +342,43 @@ export type DialSpec = {
 
 /** Arc over track, keyed off how far along the day is. Each track is the same
  *  hue as its arc, lightened — the reference look: one colour, two weights. */
-function dialTone(pct: number, pending: boolean): { color: string; track: string } {
+/** How much of the selling day has gone: 0 at 8am Arizona, 1 at 6pm. Anything
+ *  outside the window clamps, so a 7am run reads as the start of the day rather
+ *  than as a negative. */
+export function paceFraction(hour: number, minute = 0): number {
+  const START = 8, END = 18;
+  const t = hour + minute / 60;
+  return Math.max(0, Math.min(1, (t - START) / (END - START)));
+}
+
+/** The four pace bands, in one place so the dials and the legend under them
+ *  can never describe different things. */
+export const PACE_BANDS = [
+  { min: 1.00, label: "On pace or ahead", color: "#1a7f3c", track: "#dcefe2" },
+  { min: 0.75, label: "Slightly behind",  color: "#2f9558", track: "#e0efe6" },
+  { min: 0.50, label: "Behind",           color: "#b5651d", track: "#f6e6d6" },
+  { min: 0,    label: "Well behind",      color: "#a8202a", track: "#f3dcdd" },
+];
+
+/** Colour is pace, not progress. Eight submissions at ten in the morning is a
+ *  good morning; the same eight at five in the afternoon is a bad day. Judging
+ *  both against a flat 30 would paint every morning email red and teach people
+ *  to ignore the colour. The arc length still shows progress to goal, so the
+ *  two readings stay independent: how far round, and what colour. */
+function dialTone(value: number, goal: number, pending: boolean, pace: number): { color: string; track: string } {
+  const only = (p: { color: string; track: string }) => ({ color: p.color, track: p.track });
   if (pending) return { color: "#b6bfcb", track: "#eef1f5" };
-  if (pct >= 100) return { color: "#1a7f3c", track: "#dcefe2" };
-  if (pct >= 60) return { color: "#2f9558", track: "#e0efe6" };
-  if (pct >= 30) return { color: "#b5651d", track: "#f6e6d6" };
-  return { color: "#a8202a", track: "#f3dcdd" };
+  // Goal met is green whatever the clock says.
+  if (goal && value >= goal) return only(PACE_BANDS[0]);
+  const expected = goal * pace;
+  // Before the day starts there is nothing to be behind on.
+  const ratio = expected <= 0 ? 1 : value / expected;
+  return only(PACE_BANDS.find((b) => ratio >= b.min) || PACE_BANDS[PACE_BANDS.length - 1]);
 }
 
 /** The shape of every dial, in one place, so the renderer that draws the image
  *  and the HTML that places it can never drift apart. */
-export function dialSpecs(b: BoardData): DialSpec[] {
+export function dialSpecs(b: BoardData, pace = 1): DialSpec[] {
   const raw: { key: DialSpec["key"]; label: string; value: number; goal: number; pending: boolean }[] = [
     { key: "subs", label: "SUBS", value: b.kpi.subsToday ?? 0, goal: DIAL_GOALS.subs, pending: false },
     { key: "doc", label: "DOC CHECK", value: b.kpi.docCheckToday ?? 0, goal: DIAL_GOALS.docCheck, pending: false },
@@ -361,14 +387,74 @@ export function dialSpecs(b: BoardData): DialSpec[] {
   ];
   return raw.map((r) => {
     const pct = r.pending || !r.goal ? 0 : Math.min(100, Math.round(r.value / r.goal * 100));
-    return { ...r, pct, unit: r.pending ? "awaiting" : "of " + r.goal, ...dialTone(pct, r.pending) };
+    return { ...r, pct, unit: r.pending ? "awaiting" : "of " + r.goal, ...dialTone(r.value, r.goal, r.pending, pace) };
   });
 }
 
 const DIAL_PX = 112;
 
-function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string }, src?: Partial<Record<DialSpec["key"], string>>): string {
-  const cells = dialSpecs(b).map((d) => {
+export type LegendStyle = "dots" | "bar" | "sentence" | "chips" | "off";
+
+/** How the colour rule is explained under the dials. The rule itself lives in
+ *  PACE_BANDS; these are only ways of saying it. */
+function paceLegend(style: LegendStyle, pace: number, band: { bg: string; line: string; ink: string }): string {
+  if (style === "off") return "";
+  const note = `${Math.round(pace * 100)}% of day complete`;
+  const muted = `font-family:${F};font-size:10px;font-weight:400;line-height:1.6;color:#8d97a4`;
+
+  if (style === "sentence") {
+    // One line of prose. The colour words carry their own colour, so the key
+    // and the sentence are the same object.
+    const word = (p: typeof PACE_BANDS[number]) =>
+      `<span style="font-family:${F};font-size:10.5px;font-weight:700;color:${p.color}">${p.label.toLowerCase()}</span>`;
+    return tbl(`width="100%"`,
+      `<tr><td style="${muted};font-size:10.5px">Dial colour shows pace against the clock &mdash; `
+      + PACE_BANDS.map(word).join(`<span style="color:#b9c2cd">&nbsp;&middot;&nbsp;</span>`)
+      + ` &mdash; with ${note}.</td></tr>`);
+  }
+
+  if (style === "chips") {
+    // The bands as labelled ranges: what number keeps you in which colour.
+    const ranges = ["100%+", "75\u201399%", "50\u201374%", "under 50%"];
+    return tbl(`width="100%"`,
+      `<tr>` + PACE_BANDS.map((p, i) =>
+        `<td width="21%" style="padding-right:6px">`
+        + tbl(`width="100%"`,
+          `<tr><td height="4" bgcolor="${p.color}" style="height:4px;background:${p.color};font-size:0;line-height:0">&nbsp;</td></tr>`
+          + `<tr><td style="font-family:${F};font-size:10.5px;font-weight:700;line-height:1.5;color:${p.color};padding-top:4px">${ranges[i]}</td></tr>`
+          + `<tr><td style="font-family:${F};font-size:9.5px;font-weight:600;line-height:1.3;color:#7b8698">${p.label}</td></tr>`)
+        + `</td>`).join("")
+      + `</tr>`);
+  }
+
+  if (style === "bar") {
+    // A single bar reading left to right, worst to best, with the thresholds
+    // printed under the joins rather than inside the blocks.
+    const seg = [...PACE_BANDS].reverse();
+    return tbl(`width="100%"`,
+      `<tr><td>`
+      + tbl(`width="300" style="width:300px"`,
+        `<tr>` + seg.map((p) =>
+          `<td width="25%" height="9" bgcolor="${p.color}" style="height:9px;background:${p.color};font-size:0;line-height:0">&nbsp;</td>`).join("") + `</tr>`
+        + `<tr>` + ["0", "50%", "75%", "100%"].map((t, i) =>
+          `<td width="25%" style="font-family:${F};font-size:9px;font-weight:600;line-height:1.6;color:#8d97a4;${i ? "text-align:left" : ""}">${t}</td>`).join("") + `</tr>`)
+      + `</td>`
+      + `<td valign="middle" align="right" style="${muted}">`
+      + `Behind &rarr; ahead of pace &nbsp;&middot;&nbsp; ${note}</td></tr>`);
+  }
+
+  // "dots" — the original.
+  return tbl(`width="100%"`,
+    `<tr><td>`
+    + PACE_BANDS.map((p) =>
+      `<span style="display:inline-block;width:10px;height:10px;background:${p.color};border-radius:5px;font-size:0;line-height:0">&nbsp;</span>`
+      + `<span style="font-family:${F};font-size:10px;font-weight:600;line-height:1.6;color:#7b8698">&nbsp;${p.label}&nbsp;&nbsp;&nbsp;</span>`).join("")
+    + `</td><td align="right" style="${muted};white-space:nowrap">${note}</td></tr>`);
+}
+
+
+function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string }, pace: number, showPct: boolean, legend: LegendStyle, src?: Partial<Record<DialSpec["key"], string>>): string {
+  const cells = dialSpecs(b, pace).map((d) => {
     const url = src?.[d.key];
     const art = url
       ? `<img src="${url}" width="${DIAL_PX}" height="${DIAL_PX}" alt="${esc(d.label)} ${d.pending ? "awaiting" : d.value + " of " + d.goal}"`
@@ -383,7 +469,9 @@ function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string 
         + `<div style="font-family:${F};font-size:10px;font-weight:600;line-height:1.4;color:#8a94a4">${d.unit}</div></div>`;
     return `<td width="25%" align="center" valign="top" style="padding:0 4px">`
       + art
-      + `<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>`
+      + `<div style="height:${showPct ? 6 : 10}px;line-height:${showPct ? 6 : 10}px;font-size:0">&nbsp;</div>`
+      + (showPct && !d.pending
+        ? `<div style="font-family:${F};font-size:12px;font-weight:800;line-height:1.3;color:${d.color}">${d.pct}%</div>` : "")
       + `<div style="font-family:${F};font-size:10px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:.9px">${d.label}</div>`
       + `</td>`;
   }).join("");
@@ -391,6 +479,8 @@ function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string 
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTIVITY</td></tr>`)
     + tbl(`width="100%"`, `<tr>${cells}</tr>`)
+    + `<div style="height:14px;line-height:14px;font-size:0">&nbsp;</div>`
+    + paceLegend(legend, pace, band)
     + `</td></tr>`;
 }
 
@@ -436,6 +526,13 @@ export function renderDigest(
     dialSrc?: Partial<Record<DialSpec["key"], string>>;
     /** Which shade the team header and totals band wear. See BANDS. */
     band?: keyof typeof BANDS;
+    /** 0 at the start of the selling day, 1 at the end. Drives the dial colours
+     *  and the legend under them. Defaults to end-of-day. */
+    pace?: number;
+    /** Print each dial's percent of goal beneath the number. */
+    dialPct?: boolean;
+    /** How the pace colour rule is explained under the dials. */
+    legend?: LegendStyle;
   },
 ): Digest {
   const { teams, hit, total, pct } = digestTeams(b);
@@ -444,6 +541,7 @@ export function renderDigest(
   const leader = teams[0];
   const url = opts.boardUrl || "#";
   const band = BANDS[opts.band || "stone"];
+  const pace = opts.pace === undefined ? 1 : opts.pace;
   const everyone = [...teams.flatMap((g) => g.aes), ...teams.flatMap((g) => g.hidden)];
   const tot = (f: (a: { calls: number; talk: number; tix: number; subs: number }) => number) =>
     everyone.reduce((t, a) => t + f(a), 0);
@@ -565,10 +663,13 @@ export function renderDigest(
     `<tr><td bgcolor="#1f5133" style="background:#1f5133;padding:15px 20px">`
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:15px;font-weight:700;line-height:1.2;color:#ffffff">Oaktree Funding&nbsp;&nbsp;<span style="font-weight:400;color:#bcd6c6">${esc((b.title || "Sales Production").replace(/ Sales Production$/, ""))}</span></td>`
-      + `<td align="right" style="font-family:${F};font-size:12px;font-weight:600;line-height:1.2;color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</td></tr>`)
+      + `<td align="right">`
+      + `<div style="font-family:${F};font-size:12px;font-weight:600;line-height:1.3;color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</div>`
+      + `<div style="font-family:${F};font-size:11px;font-weight:400;line-height:1.4;color:#8fb49d">${Math.round(pace * 100)}% of day complete</div>`
+      + `</td></tr>`)
     + `</td></tr>`
     + banner
-    + dialsBlock(b, band, opts.dialSrc)
+    + dialsBlock(b, band, pace, !!opts.dialPct, opts.legend || "chips", opts.dialSrc)
     + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:22px 20px 18px">`
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:46px;font-weight:800;line-height:1;color:${INK};letter-spacing:-1.5px;white-space:nowrap">${hit}<span style="font-size:26px;font-weight:600;color:${MUT}"> of ${total}</span></td>`
@@ -605,7 +706,7 @@ export function renderDigest(
   // after the subject — carries the key instead. Read together they say
   // "1-4-0-34" then "Subs · Doc Check · UW · Tix", which teaches the order once
   // and then stays out of the way.
-  const dials = dialSpecs(b);
+  const dials = dialSpecs(b, pace);
   const indicators = dials.map((d) => (d.pending ? "\u2013" : d.value)).join("/");
   const preheader = `${dials.map((d) => d.label.replace("DOC CHECK", "Doc Check")
     .replace("SUBS", "Subs").replace("UW", "UW").replace("TIX", "Tix")).join(" \u00b7 ")}`

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBoard } from "@/lib/fetch";
-import { renderDigest, dialSpecs } from "@/lib/digest";
-import { dialSvg, dialDataUri } from "@/lib/dial";
+import { renderDigest, dialSpecs, paceFraction } from "@/lib/digest";
+import { dialSvg, dialDataUri, DIAL_BG } from "@/lib/dial";
 import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 import type { Channel } from "@/lib/board";
 
@@ -24,6 +24,7 @@ function azParts() {
     send: f({ hour: "numeric", minute: "2-digit", hour12: true }),
     date: f({ weekday: "long", month: "short", day: "numeric" }),
     hour: Number(f({ hour: "numeric", hour12: false })),
+    minute: Number(f({ minute: "numeric" })),
     dow: new Intl.DateTimeFormat("en-US", { timeZone: "America/Phoenix", weekday: "short" }).format(now),
   };
 }
@@ -53,7 +54,10 @@ export async function GET(req: NextRequest) {
     // The dials are images. A browser preview can take the SVG straight as a
     // data: URI; a real send needs raster parts, so JSON hands the mailer the
     // SVG per dial and points the HTML at the cid: it will attach them under.
-    const dials = dialSpecs(board);
+    // Colour is judged against how much of the selling day has gone, so the
+    // 10am send is not uniformly red for the crime of being the 10am send.
+    const pace = paceFraction(az.hour, az.minute);
+    const dials = dialSpecs(board, pace);
     const dialSrc: Record<string, string> = {};
     for (const d of dials) dialSrc[d.key] = asJson ? `cid:dial-${d.key}` : dialDataUri(d);
 
@@ -61,7 +65,7 @@ export async function GET(req: NextRequest) {
       sendLabel: q.get("at") || az.send,
       dateLabel: az.date,
       boardUrl: channel === "wholesale" ? origin : `${origin}/${channel}`,
-      dialSrc,
+      dialSrc, pace,
     });
 
     if (asJson) {
@@ -77,7 +81,7 @@ export async function GET(req: NextRequest) {
         dials: dials.map((d) => ({
           cid: `dial-${d.key}`, key: d.key, label: d.label,
           value: d.value, goal: d.goal, pct: d.pct, pending: d.pending,
-          unit: d.unit, color: d.color, track: d.track, svg: dialSvg(d),
+          unit: d.unit, color: d.color, track: d.track, bg: DIAL_BG, svg: dialSvg(d),
         })),
         callsPending: board.callsPending, tixPending: board.tixPending,
         updatedLabel: board.updatedLabel, callsUpdatedLabel: board.callsUpdatedLabel,
