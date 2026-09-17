@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       to:
-        description: "Send to this address instead (test send, subject gets [TEST])"
+        description: "Test send to these addresses instead — comma, semicolon or space separated. Subject gets [TEST]"
         type: string
         required: false
       dry_run:
@@ -32,11 +32,19 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
+      # Inputs go in through the environment rather than being interpolated into
+      # the command. Interpolating put the typed addresses straight into a shell
+      # line, so "a@x.com, b@y.com" split on the space and failed the job — and
+      # anything else typed in that box would have been shell too.
       - name: Send digest
+        env:
+          DIGEST_TO: ${{ inputs.to }}
+          DIGEST_DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          python meridian_report_bot.py --digest \
-            ${{ inputs.dry_run && '--dry-run' || '' }} \
-            ${{ inputs.to && format('--to {0} --force', inputs.to) || '' }}
+          ARGS="--digest"
+          if [ "$DIGEST_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "$DIGEST_TO" ]; then ARGS="$ARGS --force"; fi
+          python meridian_report_bot.py $ARGS
       - name: Upload preview
         if: ${{ inputs.dry_run }}
         uses: actions/upload-artifact@v4
