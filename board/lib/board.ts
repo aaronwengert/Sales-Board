@@ -17,14 +17,25 @@ export const BOARDS: Record<Channel, { title: string; goal: number }> = {
 // Roster of record. The Rainmakers were dissolved 2026-09-16 and their eleven
 // redistributed; Reese Rogers went to HOUSE and Brian Sherrill left the company.
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
-  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Adam Paniagua","Zia Hasso","Michael Blaschuk"] },
+  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Zia Hasso","Michael Blaschuk","Dalton Phillips","William Boucher"] },
   "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby","Djimon Colbert","Joseph Marino"] },
-  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Ryan Matyniak","Benjamin Martin","Logan Kincade","Mari Woods"] },
+  "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Ryan Matyniak","Benjamin Martin","Logan Kincade","Mari Woods","Jackson Miles"] },
   "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez II","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
   "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins"] },
 };
+// Who runs each team. Declared, not inferred: a manager with no production
+// rows never appears in the export, and Mike Ernst is not on the roster at all,
+// so reading this off the data would silently leave teams unattributed.
+export const TEAM_MANAGERS: Record<string, string> = {
+  "Lien Kings": "Eric Ferguson",
+  "Cash Flow Cowboys": "John Giordano",
+  "Cash Flow Commanders": "Matthew Cefalo",
+  "CTC Crusaders": "Adam Martin",
+  "Bone Crushers": "Mike Ernst",
+};
+
 // Former AEs still count: their wholesale-channel funded loans count toward the
 // goal, and they show on the board (tagged "· former") any month they funded.
 // Their old team no longer exists, and pinning them to a surviving one would
@@ -44,7 +55,7 @@ const RETIRE: Record<string, string> = {
 // but every dollar already on their files keeps counting in the team tiles, so
 // removing a rep never silently deletes production from the month. There is no
 // visible "House" row; the money simply stays in the totals up top.
-const HOUSE = new Set(["reese rogers", "jeff laux"]);
+const HOUSE = new Set(["reese rogers", "jeff laux", "adam paniagua"]);
 function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 
 // Daily-goal exemptions (wholesale):
@@ -53,7 +64,7 @@ function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 //   and denominator). They are NOT seeded, so with no data they don't appear.
 // GOAL_EXEMPT — TODAY data stays live on their row, but they are excluded
 //   from the goal % math the same way.
-const GOAL_DASH = new Set(["eric ferguson","adam martin","matthew cefalo","john giordano","adam paniagua"]);
+const GOAL_DASH = new Set(["eric ferguson","adam martin","matthew cefalo","john giordano"]);
 const GOAL_EXEMPT = new Set(["dashann austin","joseph marino"]);
 
 // Why a GOAL_DASH row is exempt, in the person's own words rather than the
@@ -66,7 +77,6 @@ const ROLES: Record<string, string> = {
   "adam martin": "Sales Manager",
   "matthew cefalo": "Sales Manager",
   "john giordano": "Sales Manager",
-  "adam paniagua": "Retail",
 };
 
 // Pipeline tier shading (dark green / light green / amber / red) is a judgement
@@ -208,6 +218,7 @@ export type BoardData = {
   /** Rows new enough that their numbers carry a NEW tag. */
   newAEs: string[];
   exemptAEs: string[];
+  teamManagers: Record<string, string>;
   /** AEs marked out of office for the current Arizona business day. Sourced
    *  from the projections app; empty when that feed is absent. */
   oooAEs: string[];
@@ -438,6 +449,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     noTierAEs: rows.map((r) => r[0]).filter(noTier),
     newAEs: rows.map((r) => r[0]).filter(isNewAE),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
+    teamManagers: TEAM_MANAGERS,
     oooAEs,
     callsPending: !callsIsToday,
     tixPending: !(ticketsCsv && tixIsToday),

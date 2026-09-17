@@ -11,6 +11,7 @@
 
 import type { BoardData } from "./board";
 
+const PAGE_W = 700;
 const CALLS_GOAL = 75, TALK_GOAL = 90, SUB_GOAL = 1, TIX_GOAL = 3;
 
 const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -23,8 +24,12 @@ type AE = {
   callsTxt: string; talkTxt: string; tixTxt: string;
   cH: boolean; tH: boolean; xH: boolean; sH: boolean; met: boolean; all4: boolean;
   gap: string | null;
+  /** Live numbers, outside the goal fraction — the board's GOAL_EXEMPT rule.
+   *  The row prints normally and carries no status, because a check would claim
+   *  a hit the denominator never counted. */
+  exempt: boolean;
 };
-type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hit: number; n: number; pct: number };
+type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; manager: string | null; hit: number; n: number; pct: number };
 
 /** Team rollups, using exactly the board's inclusion rules. */
 export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: number; pct: number } {
@@ -34,11 +39,18 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
 
   for (const r of b.rows) {
     const name = r[0], team = teamOf(r[1]);
-    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hit: 0, n: 0, pct: 0 });
+    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], manager: null, hit: 0, n: 0, pct: 0 });
     const g = byTeam.get(team)!;
     if (ooo.has(name)) { g.sidelined.push({ name, why: "Out of office" }); continue; }
-    if (dash.has(name)) { g.sidelined.push({ name, why: b.roles?.[name] || "Not scored" }); continue; }
-    if (exempt.has(name)) { g.sidelined.push({ name, why: "Exempt" }); continue; }
+    if (dash.has(name)) {
+      const role = b.roles?.[name];
+      // A sales manager is named once in the card header, by the roster map
+      // below, and never as a dashed row among the people he manages.
+      if (role === "Sales Manager") continue;
+      g.sidelined.push({ name, why: role || "Not scored" });
+      continue;
+    }
+    const isExempt = exempt.has(name);
 
     const td = b.today[name] || [0, 0, 0];
     const calls = td[0], talk = Math.round(td[1]), subs = td[2], tix = b.tix[name] || 0;
@@ -57,11 +69,11 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
       const opts: { p: number; txt: string }[] = [];
       if (!b.callsPending) {
         opts.push({ p: calls / CALLS_GOAL, txt: `${CALLS_GOAL - calls} calls` });
-        opts.push({ p: talk / TALK_GOAL, txt: `${TALK_GOAL - talk} talk min` });
+        opts.push({ p: talk / TALK_GOAL, txt: `${TALK_GOAL - talk} min` });
       }
       if (!b.tixPending) {
         const need = TIX_GOAL - tix;
-        opts.push({ p: tix / TIX_GOAL, txt: `${need} ticket${need === 1 ? "" : "s"}` });
+        opts.push({ p: tix / TIX_GOAL, txt: `${need} tix` });
       }
       opts.sort((x, y) => y.p - x.p);
       gap = opts.length ? opts[0].txt : null;
@@ -72,17 +84,19 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
       callsTxt: b.callsPending ? DASH_TXT : String(calls),
       talkTxt: b.callsPending ? DASH_TXT : String(talk),
       tixTxt: b.tixPending ? DASH_TXT : String(tix),
-      cH, tH, xH, sH, met, all4, gap,
+      cH, tH, xH, sH, met, all4, gap, exempt: isExempt,
     });
   }
 
   const teams = [...byTeam.values()];
+  for (const g of teams) g.manager = b.teamManagers?.[g.team] || null;
   for (const g of teams) {
     // Hitters first inside a team, so a card reads as "who is in" then "who is working".
     g.aes.sort((a, c) => Number(c.met) - Number(a.met) || a.name.localeCompare(c.name));
     g.sidelined.sort((a, c) => a.name.localeCompare(c.name));
-    g.n = g.aes.length;
-    g.hit = g.aes.filter((a) => a.met).length;
+    const scored = g.aes.filter((a) => !a.exempt);
+    g.n = scored.length;
+    g.hit = scored.filter((a) => a.met).length;
     g.pct = g.n ? Math.round(g.hit / g.n * 100) : 0;
   }
   teams.sort((a, c) => c.pct - a.pct || c.n - a.n || a.team.localeCompare(c.team));
@@ -149,11 +163,11 @@ const GOLD = "#9a7a10", GOLD_BG = "#fdf6dd", GOLD_LINE = "#e8d38f";
 export function leadersBlock(ls: Leader[], style: "row" | "grid" | "metric"): string {
   const METRIC_COLOR: Record<string, string> = { calls: "#6b4fbb", talk: "#2a5bbf", tix: "#c08a1a", subs: "#1a9e4e" };
   const nameLine = (l: Leader, size: number) => {
-    if (l.pending) return `<span style="font:400 ${size}px/1.35 ${F};color:#b6bfcb">awaiting report</span>`;
-    if (l.empty) return `<span style="font:400 ${size}px/1.35 ${F};color:#b6bfcb">none yet</span>`;
+    if (l.pending) return `<span style="font-family:${F};font-size:${size}px;font-weight:400;line-height:1.35;color:#b6bfcb">awaiting report</span>`;
+    if (l.empty) return `<span style="font-family:${F};font-size:${size}px;font-weight:400;line-height:1.35;color:#b6bfcb">none yet</span>`;
     const shown = l.names.length <= 2 ? l.names.join(", ") : `${l.names[0]} +${l.names.length - 1} more`;
-    const tie = l.names.length > 1 ? `<br><span style="font:600 ${size - 1.5}px/1.4 ${F};color:#a99456">${l.names.length}-way tie</span>` : "";
-    return `<span style="font:600 ${size}px/1.35 ${F};color:${INK}">${esc(shown)}</span>${tie}`;
+    const tie = l.names.length > 1 ? `<br><span style="font-family:${F};font-size:${size - 1.5}px;font-weight:600;line-height:1.4;color:#a99456">${l.names.length}-way tie</span>` : "";
+    return `<span style="font-family:${F};font-size:${size}px;font-weight:600;line-height:1.35;color:${INK}">${esc(shown)}</span>${tie}`;
   };
 
   if (style === "grid") {
@@ -162,8 +176,8 @@ export function leadersBlock(ls: Leader[], style: "row" | "grid" | "metric"): st
       return `<td width="50%" valign="top" style="padding:0 5px 10px">`
         + tbl(`width="100%" bgcolor="${dim ? "#ffffff" : GOLD_BG}" style="background:${dim ? "#ffffff" : GOLD_BG};border:1px solid ${dim ? LINE : GOLD_LINE}"`,
           `<tr><td style="padding:11px 13px 12px">`
-          + `<div style="font:700 9.5px/1.2 ${F};color:${dim ? "#98a2b1" : GOLD};letter-spacing:.9px">${dim ? "" : "\u2605 "}${l.label}</div>`
-          + `<div style="font:800 26px/1.15 ${F};color:${dim ? "#c3cbd6" : "#7a5f0c"};letter-spacing:-.5px;padding:5px 0 3px">${l.value}</div>`
+          + `<div style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1.2;color:${dim ? "#98a2b1" : GOLD};letter-spacing:.9px">${dim ? "" : "\u2605 "}${l.label}</div>`
+          + `<div style="font-family:${F};font-size:26px;font-weight:800;line-height:1.15;color:${dim ? "#c3cbd6" : "#7a5f0c"};letter-spacing:-.5px;padding:5px 0 3px">${l.value}</div>`
           + `<div>${nameLine(l, 13)}</div></td></tr>`)
         + `</td>`;
     };
@@ -172,6 +186,9 @@ export function leadersBlock(ls: Leader[], style: "row" | "grid" | "metric"): st
         `<tr>${cell(ls[0])}${cell(ls[1])}</tr><tr>${cell(ls[2])}${cell(ls[3])}</tr>`)
       + `</td></tr>`;
   }
+
+  /** Every Today's Best tile is this tall, whatever is inside it. */
+const TILE_H = 86;
 
   const gold = style === "row";
   const cell = (l: Leader) => {
@@ -192,14 +209,14 @@ export function leadersBlock(ls: Leader[], style: "row" | "grid" | "metric"): st
     const caption = !dim && l.names.length > 1
       ? `TIED &middot; ${l.names.length} WAY`
       : !dim && l.teams[0] ? esc(l.teams[0]).toUpperCase() : "&nbsp;";
-    const tie = `<div style="font:600 8.5px/1.3 ${F};color:#a99456;padding-top:3px;letter-spacing:.4px">${caption}</div>`;
+    const tie = `<div style="font-family:${F};font-size:8.5px;font-weight:600;line-height:1.3;color:#a99456;padding-top:3px;letter-spacing:.4px">${caption}</div>`;
     return `<td width="25%" valign="top" style="padding:0 4px">`
       + tbl(`width="100%" bgcolor="${bg}" style="background:${bg};border:1px solid ${bd};border-top:3px solid ${dim ? "#dbe2ea" : ac}"`,
-        `<tr><td align="center" style="padding:10px 6px 11px">`
+        `<tr><td align="center" height="${TILE_H}" valign="top" style="height:${TILE_H}px;padding:10px 6px 11px">`
         + face
-        + `<div style="font:700 8.5px/1.2 ${F};color:${dim ? "#98a2b1" : ac};letter-spacing:.7px">${!dim && gold ? "\u2605 " : ""}${l.label}</div>`
-        + `<div style="font:800 23px/1.15 ${F};color:${dim ? "#c3cbd6" : gold ? "#7a5f0c" : ac};letter-spacing:-.5px;padding:5px 0 3px">${l.value}</div>`
-        + `<div style="font:600 11px/1.3 ${F};color:${INK}">${who}</div>${tie}</td></tr>`)
+        + `<div style="font-family:${F};font-size:8.5px;font-weight:700;line-height:1.2;color:${dim ? "#98a2b1" : ac};letter-spacing:.7px">${!dim && gold ? "\u2605 " : ""}${l.label}</div>`
+        + `<div style="font-family:${F};font-size:23px;font-weight:800;line-height:1.15;color:${dim ? "#c3cbd6" : gold ? "#7a5f0c" : ac};letter-spacing:-.5px;padding:5px 0 3px">${l.value}</div>`
+        + `<div style="font-family:${F};font-size:11px;font-weight:600;line-height:1.3;color:${INK}">${who}</div>${tie}</td></tr>`)
       + `</td>`;
   };
   return `<tr><td style="padding:0 0 6px">`
@@ -220,29 +237,48 @@ function bar(pct: number, color: string, w: number, h: number) {
     + `<td height="${h}" bgcolor="#dce3ec" style="height:${h}px;font-size:0;line-height:0">&nbsp;</td></tr>`);
 }
 
-const W = { calls: 50, talk: 50, tix: 40, subs: 44, stat: 128 };
+const W = { calls: 33, talk: 33, tix: 26, subs: 28, stat: 60 };
 const headCell = (txt: string, w: number) =>
-  `<td width="${w}" align="right" style="font:700 9.5px/1.2 ${F};color:#98a2b1;letter-spacing:.8px;padding:0 0 6px">${txt}</td>`;
+  `<td width="${w}" align="right" style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1.2;color:#98a2b1;letter-spacing:.6px;padding:0 0 6px 5px">${txt}</td>`;
 const headerRow = () =>
   `<tr><td style="padding:0 0 6px">&nbsp;</td>`
   + headCell("CALLS", W.calls) + headCell("TALK", W.talk) + headCell("TIX", W.tix) + headCell("SUBS", W.subs)
   + headCell("STATUS", W.stat) + `</tr>`;
 
+/** The board's own language for a hit, carried across verbatim: the metric that
+ *  scored wears the green pill, and the status column is the round check in its
+ *  halo rather than the word HIT. Word's engine drops border-radius and draws
+ *  both square, which still reads correctly. */
+const HIT_INK = "#127a3c", HIT_BG = "#e4f5ea", HIT_RING = "#9bdcb4", HIT_DEEP = "#0b5c2c";
+
+function chip(mark: string, bg: string, ring: string, ink: string) {
+  return tbl(`width="22" style="width:22px;margin:0 0 0 auto"`,
+    `<tr><td width="22" height="22" align="center" valign="middle" bgcolor="${bg}"`
+    + ` style="width:22px;height:22px;background:${bg};border:1px solid ${ring};border-radius:11px;`
+    + `font-family:${F};font-size:12px;font-weight:700;line-height:1;color:${ink}">${mark}</td></tr>`);
+}
+
 function aeRow(a: AE) {
   const num = (val: string, on: boolean, w: number) =>
-    `<td width="${w}" align="right" style="font:${on ? 700 : 400} 13px/1.3 ${F};color:${on ? GRN : "#9aa4b2"};padding:7px 0;border-bottom:1px solid #f4f6fa">${val}</td>`;
-  const stat = a.met
-    ? `<span style="font:700 10px/1 ${F};color:#0b5c2c;background:#d6f0e0;padding:4px 8px;letter-spacing:.5px">${a.all4 ? "ALL FOUR" : "HIT"}</span>`
-    : a.gap
-      ? `<span style="font:600 11.5px/1 ${F};color:#8a4b12;background:#fbeed6;padding:4px 8px;white-space:nowrap">${a.gap} to go</span>`
-      : `<span style="font:600 11px/1 ${F};color:#98a2b1">awaiting data</span>`;
-  return `<tr><td style="font:400 13.5px/1.3 ${F};color:${a.met ? INK : "#7b8698"};padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
+    `<td width="${w}" align="right" style="padding:7px 0 7px 5px;border-bottom:1px solid #f4f6fa">`
+    + (on
+      ? `<span style="font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${HIT_INK}">${val}</span>`
+      : `<span style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#9aa4b2">${val}</span>`)
+    + `</td>`;
+  const stat = a.all4
+    ? chip("&#9733;", "#f2c33d", "#d0a021", "#5c4405")
+    : a.met
+      ? chip("&#10003;", HIT_BG, HIT_RING, HIT_DEEP)
+      : a.gap
+        ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
+        : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
+  return `<tr><td style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk) + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
     + `<td width="${W.stat}" align="right" style="padding:7px 0;border-bottom:1px solid #f4f6fa">${stat}</td></tr>`;
 }
 const sideRow = (s: { name: string; why: string }) =>
-  `<tr><td style="font:400 13.5px/1.3 ${F};color:#b6bfcb;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
-  + `<td colspan="5" align="right" style="font:600 10px/1.3 ${F};color:#b6bfcb;letter-spacing:.7px;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
+  `<tr><td style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.name)}</td>`
+  + `<td colspan="5" align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.3;color:#b6bfcb;letter-spacing:.7px;padding:7px 0;border-bottom:1px solid #f4f6fa">${esc(s.why).toUpperCase()}</td></tr>`;
 
 /** Daily stage targets for the dial row, team-wide. Calibrated against a full
  *  day's export (Tue 9/15: 18 subs, 13 into doc check, 12 into underwriting). */
@@ -308,18 +344,18 @@ function dialsBlock(b: BoardData, src?: Partial<Record<DialSpec["key"], string>>
       // draws a square, which still carries the number and the colour.
       : `<div style="width:${DIAL_PX - 14}px;height:${DIAL_PX - 14}px;margin:0 auto;background:${d.track};`
         + `border:7px solid ${d.color};border-radius:${DIAL_PX}px;text-align:center">`
-        + `<div style="font:800 31px/1 ${F};color:${d.pending ? "#b6bfcb" : d.color};letter-spacing:-1px;padding-top:${(DIAL_PX - 14 - 45) / 2}px">`
+        + `<div style="font-family:${F};font-size:31px;font-weight:800;line-height:1;color:${d.pending ? "#b6bfcb" : d.color};letter-spacing:-1px;padding-top:${(DIAL_PX - 14 - 45) / 2}px">`
         + (d.pending ? "&ndash;" : d.value) + `</div>`
-        + `<div style="font:600 10px/1.4 ${F};color:#8a94a4">${d.unit}</div></div>`;
+        + `<div style="font-family:${F};font-size:10px;font-weight:600;line-height:1.4;color:#8a94a4">${d.unit}</div></div>`;
     return `<td width="25%" align="center" valign="top" style="padding:0 4px">`
       + art
       + `<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>`
-      + `<div style="font:700 10px/1.2 ${F};color:${MUT};letter-spacing:.9px">${d.label}</div>`
+      + `<div style="font-family:${F};font-size:10px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:.9px">${d.label}</div>`
       + `</td>`;
   }).join("");
   return `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:18px 12px 18px">`
     + tbl(`width="100%"`,
-      `<tr><td style="font:700 11px/1.2 ${F};color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTION</td></tr>`)
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTION</td></tr>`)
     + tbl(`width="100%"`, `<tr>${cells}</tr>`)
     + `</td></tr>`;
 }
@@ -332,12 +368,12 @@ function sweepBanner(teams: Team[]): string {
   const swept = teams.flatMap((g) => g.aes.filter((a) => a.all4).map((a) => ({ n: a.name, t: g.team })));
   if (!swept.length) return "";
   const names = swept.map((x) =>
-    `<span style="font:700 15px/1.5 ${F};color:#5c4405">&#9733; ${esc(x.n)}</span>`
-    + `<span style="font:600 11px/1.5 ${F};color:#8a7420">&nbsp;${esc(x.t)}</span>`).join(SWEEP_SEP);
+    `<span style="font-family:${F};font-size:15px;font-weight:700;line-height:1.5;color:#5c4405">&#9733; ${esc(x.n)}</span>`
+    + `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1.5;color:#8a7420">&nbsp;${esc(x.t)}</span>`).join(SWEEP_SEP);
   return `<tr><td style="padding:0 0 10px">`
     + tbl(`width="100%" bgcolor="${GOLD_BG}" style="background:${GOLD_BG};border:1px solid ${GOLD_LINE};border-left:5px solid #e0ab24"`,
       `<tr><td style="padding:12px 16px">`
-      + `<div style="font:700 9.5px/1.2 ${F};color:${GOLD};letter-spacing:1.1px;padding-bottom:5px">ALL FOUR CATEGORIES</div>`
+      + `<div style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1.2;color:${GOLD};letter-spacing:1.1px;padding-bottom:5px">ALL FOUR CATEGORIES</div>`
       + `<div>${names}</div></td></tr>`)
     + `</td></tr>`;
 }
@@ -388,7 +424,7 @@ export function renderDigest(
     if (logoStyle === "as-rank") {
       cells = `<td width="38" style="padding:7px 0">${mark(28)}</td>`;
     } else if (logoStyle === "badge") {
-      cells = `<td width="22" style="font:400 12px/1.3 ${F};color:#b6bfcb;padding:8px 0">${i + 1}</td>`
+      cells = `<td width="22" style="font-family:${F};font-size:12px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:8px 0">${i + 1}</td>`
         + `<td width="46" style="padding:6px 0">`
         + tbl(`width="36" style="width:36px"`,
           `<tr><td height="36" align="center" valign="middle" bgcolor="${lead ? GOLD_BG : "#f5f7fa"}"`
@@ -397,61 +433,81 @@ export function renderDigest(
           + `</td></tr>`)
         + `</td>`;
     } else if (logoStyle === "after-rank") {
-      cells = `<td width="22" style="font:400 12px/1.3 ${F};color:#b6bfcb;padding:8px 0">${i + 1}</td>`
+      cells = `<td width="22" style="font-family:${F};font-size:12px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:8px 0">${i + 1}</td>`
         + `<td width="36" style="padding:7px 0">${mark(26)}</td>`;
     } else {
-      cells = `<td width="22" style="font:400 12px/1.3 ${F};color:#b6bfcb;padding:8px 0">${i + 1}</td>`;
+      cells = `<td width="22" style="font-family:${F};font-size:12px;font-weight:400;line-height:1.3;color:#b6bfcb;padding:8px 0">${i + 1}</td>`;
     }
     const span = logoStyle === "off" ? 4 : 5;
     lb += `<tr>` + cells
-      + `<td style="font:600 13.5px/1.3 ${F};color:${INK};padding:8px 0 8px 8px">${esc(g.team)}</td>`
+      + `<td style="font-family:${F};font-size:13.5px;font-weight:600;line-height:1.3;color:${INK};padding:8px 0 8px 8px">${esc(g.team)}</td>`
       + `<td width="140" style="padding:8px 12px 8px 0">${bar(g.pct, c, 140, 7)}</td>`
-      + `<td width="54" align="right" style="font:700 13.5px/1.3 ${F};color:${c};padding:8px 0">${g.pct}%</td>`
-      + `<td width="48" align="right" style="font:400 12.5px/1.3 ${F};color:${MUT};padding:8px 0">${g.hit}/${g.n}</td></tr>`;
+      + `<td width="54" align="right" style="font-family:${F};font-size:13.5px;font-weight:700;line-height:1.3;color:${c};padding:8px 0">${g.pct}%</td>`
+      + `<td width="48" align="right" style="font-family:${F};font-size:12.5px;font-weight:400;line-height:1.3;color:${MUT};padding:8px 0">${g.hit}/${g.n}</td></tr>`;
     if (i < teams.length - 1) lb += `<tr><td colspan="${span + 1}" style="border-bottom:1px solid #f0f3f8;font-size:0;line-height:0">&nbsp;</td></tr>`;
   });
 
-  let cards = "";
+  // Team cards run two across. At 700px each card gets ~344px, which is why the
+  // metric columns below are so much narrower than the single-column version
+  // was — every width in W was measured against a clipped-name check, not
+  // guessed. An odd team count leaves the last row half empty rather than
+  // stretching one card to full width, which would read as a ranking.
   const teamPhotos = opts.photos?.teams || {};
-  for (const g of teams) {
+  const teamCard = (g: Team) => {
     const c = tone(g.pct);
     const rows = headerRow() + g.aes.map(aeRow).join("") + g.sidelined.map(sideRow).join("");
     const tp = teamPhotos[g.team];
-    const style = opts.teamPhotoStyle || "thumb";
-    // Fixed width whether or not the image loads, so a blocked photo cannot
-    // shove the team name sideways.
-    // Whole team in: every scored member hit today.
+    const pstyle = opts.teamPhotoStyle || "thumb";
     const clean = g.n > 0 && g.hit === g.n;
     const lg = (opts.photos?.logos || {})[g.team];
     const logoCell = lg
-      ? `<td width="42" valign="middle" style="width:42px"><img src="${esc(lg)}" width="32" height="32" alt="" style="display:block;width:32px;height:32px" /></td>`
+      ? `<td width="34" valign="middle" style="width:34px"><img src="${esc(lg)}" width="26" height="26" alt="" style="display:block;width:26px;height:26px" /></td>`
       : "";
-    const shot = tp && style === "thumb"
-      ? `<td width="96" valign="middle" style="width:96px"><img src="${esc(tp)}" width="84" height="48" alt="" style="display:block;width:84px;height:48px" /></td>`
+    const shot = tp && pstyle === "thumb"
+      ? `<td width="62" valign="middle" style="width:62px"><img src="${esc(tp)}" width="54" height="32" alt="" style="display:block;width:54px;height:32px" /></td>`
       : "";
-    const banner = tp && style === "banner"
-      ? `<tr><td style="font-size:0;line-height:0"><img src="${esc(tp)}" width="598" height="140" alt="" style="display:block;width:100%;max-width:598px;height:auto" /></td></tr>`
+    const bnr = tp && pstyle === "banner"
+      ? `<tr><td style="font-size:0;line-height:0"><img src="${esc(tp)}" width="342" height="86" alt="" style="display:block;width:100%;max-width:342px;height:auto" /></td></tr>`
       : "";
-    cards += `<tr><td style="padding:0 0 10px">`
-      + tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
-        banner
-        + `<tr><td style="padding:11px 16px 10px;border-bottom:2px solid ${c}">`
-        + tbl(`width="100%"`,
-          `<tr>${shot}${logoCell}<td style="font:700 14px/1.2 ${F};color:${INK};padding-left:${shot || logoCell ? 4 : 0}px">${esc(g.team)}`
-          + (clean ? ` &nbsp;<span style="font:700 10.5px/1 ${F};color:#0b5c2c;background:#d6f0e0;padding:3px 8px;letter-spacing:.5px">&#10003; ALL IN</span>` : "")
-          + `</td>`
-          + `<td align="right" width="120">${bar(g.pct, c, 90, 6)}</td>`
-          + `<td align="right" width="70" style="font:700 15px/1.2 ${F};color:${clean ? GRN : c};white-space:nowrap">&nbsp;${g.hit}/${g.n}</td></tr>`)
-        + `</td></tr><tr><td style="padding:10px 16px 12px">${tbl(`width="100%"`, rows)}</td></tr>`)
-      + `</td></tr>`;
+    return tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
+      bnr
+      + `<tr><td bgcolor="#eef2f7" style="background:#eef2f7;padding:10px 12px 9px;border-bottom:2px solid ${c}">`
+      + tbl(`width="100%"`,
+        `<tr>${shot}${logoCell}<td valign="middle" style="padding-left:${shot || logoCell ? 4 : 0}px">`
+        + `<div style="font-family:${F};font-size:14px;font-weight:800;line-height:1.2;color:${INK};letter-spacing:-.2px">${esc(g.team)}`
+        + (clean ? ` <span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#0b5c2c;background:#d6f0e0;padding:2px 6px;letter-spacing:.4px">&#10003; ALL IN</span>` : "")
+        + `</div>`
+        + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#7b8698;padding-top:1px">${esc(g.manager)}</div>` : "")
+        + `</td>`
+        + `<td align="right" valign="middle" width="46" style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${clean ? GRN : c};white-space:nowrap">${g.hit}/${g.n}</td></tr>`)
+      + `</td></tr><tr><td style="padding:8px 12px 10px">${tbl(`width="100%"`, rows)}</td></tr>`);
+  };
+
+  // Two continuous columns rather than paired rows. Rows-of-two left a hole
+  // under every short card — Bone Crushers' four people sitting beside Lien
+  // Kings' eleven. Stacking each column independently means the only ragged
+  // edge is the very bottom, and the cards are distributed by member count so
+  // even that stays small. Reading runs down the left column then the right,
+  // which the BY TEAM standings above have already ranked.
+  const cost = (g: Team) => g.aes.length + g.sidelined.length + 2;
+  const colA: Team[] = [], colB: Team[] = [];
+  let hA = 0, hB = 0;
+  for (const g of teams) {
+    if (hA <= hB) { colA.push(g); hA += cost(g); } else { colB.push(g); hB += cost(g); }
   }
+  const stack = (col: Team[]) =>
+    col.map((g) => `<tr><td style="padding:0 0 10px">${teamCard(g)}</td></tr>`).join("");
+  const cards = `<tr>`
+    + `<td width="50%" valign="top" style="padding:0 5px 0 0">${tbl(`width="100%"`, stack(colA))}</td>`
+    + `<td width="50%" valign="top" style="padding:0 0 0 5px">${tbl(`width="100%"`, stack(colB))}</td>`
+    + `</tr>`;
 
   // A pending feed is stated, not hidden — a quiet zero looks like a bad day.
   const pending: string[] = [];
   if (b.callsPending) pending.push("call report");
   if (b.tixPending) pending.push("ticket report");
   const banner = pending.length
-    ? `<tr><td bgcolor="#fbeed6" style="background:#fbeed6;border-left:1px solid #ecd8ae;border-right:1px solid #ecd8ae;padding:11px 20px;font:600 12px/1.5 ${F};color:#7a5410">`
+    ? `<tr><td bgcolor="#fbeed6" style="background:#fbeed6;border-left:1px solid #ecd8ae;border-right:1px solid #ecd8ae;padding:11px 20px;font-family:${F};font-size:12px;font-weight:600;line-height:1.5;color:#7a5410">`
       + `Today&rsquo;s ${pending.join(" and ")} ${pending.length > 1 ? "have" : "has"} not landed yet &mdash; those columns cannot score until ${pending.length > 1 ? "they arrive" : "it arrives"}.`
       + `</td></tr>`
     : "";
@@ -459,32 +515,30 @@ export function renderDigest(
   const inner =
     `<tr><td bgcolor="#1f5133" style="background:#1f5133;padding:15px 20px">`
     + tbl(`width="100%"`,
-      `<tr><td style="font:700 15px/1.2 ${F};color:#ffffff">Oaktree Funding&nbsp;&nbsp;<span style="font-weight:400;color:#bcd6c6">${esc((b.title || "Sales Production").replace(/ Sales Production$/, ""))}</span></td>`
-      + `<td align="right" style="font:600 12px/1.2 ${F};color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</td></tr>`)
+      `<tr><td style="font-family:${F};font-size:15px;font-weight:700;line-height:1.2;color:#ffffff">Oaktree Funding&nbsp;&nbsp;<span style="font-weight:400;color:#bcd6c6">${esc((b.title || "Sales Production").replace(/ Sales Production$/, ""))}</span></td>`
+      + `<td align="right" style="font-family:${F};font-size:12px;font-weight:600;line-height:1.2;color:#bcd6c6">${esc(opts.dateLabel)} &middot; ${esc(opts.sendLabel)}</td></tr>`)
     + `</td></tr>`
     + banner
     + dialsBlock(b, opts.dialSrc)
     + `<tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE};border-top:0;padding:22px 20px 18px">`
     + tbl(`width="100%"`,
-      `<tr><td style="font:800 46px/1 ${F};color:${INK};letter-spacing:-1.5px;white-space:nowrap">${hit}<span style="font-size:26px;font-weight:600;color:${MUT}"> of ${total}</span></td>`
-      + `<td align="right" style="font:800 30px/1 ${F};color:${GRN}">${pct}%</td></tr>`)
+      `<tr><td style="font-family:${F};font-size:46px;font-weight:800;line-height:1;color:${INK};letter-spacing:-1.5px;white-space:nowrap">${hit}<span style="font-size:26px;font-weight:600;color:${MUT}"> of ${total}</span></td>`
+      + `<td align="right" style="font-family:${F};font-size:30px;font-weight:800;line-height:1;color:${GRN}">${pct}%</td></tr>`)
     + `<div style="height:12px;line-height:12px;font-size:0">&nbsp;</div>`
-    + bar(pct, GRN, 558, 8)
-    + `<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>`
-    + `<div style="font:400 13px/1.5 ${F};color:${MUT}">${total - hit} still to go${leader ? ` &middot; ${esc(leader.team)} leads at ${leader.pct}%` : ""}</div>`
+    + bar(pct, GRN, PAGE_W - 42, 8)
     + `<div style="height:18px;line-height:18px;font-size:0">&nbsp;</div>`
     + tbl(`width="100%"`,
-      `<tr><td style="font:700 11px/1.2 ${F};color:${MUT};letter-spacing:1.1px;padding-bottom:2px">BY TEAM</td>`
-      + `<td align="right" style="font:600 10px/1.2 ${F};color:#98a2b1;letter-spacing:.7px;padding-bottom:2px">HIT RATE</td></tr>`)
+      `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding-bottom:2px">BY TEAM</td>`
+      + `<td align="right" style="font-family:${F};font-size:10px;font-weight:600;line-height:1.2;color:#98a2b1;letter-spacing:.7px;padding-bottom:2px">HIT RATE</td></tr>`)
     + tbl(`width="100%"`, lb)
     + `</td></tr>`
     + (leaderStyle === "off" ? "" :
-        `<tr><td style="padding:16px 0 8px;font:700 11px/1.2 ${F};color:${MUT};letter-spacing:1.1px">TODAY&rsquo;S BEST</td></tr>`
+        `<tr><td style="padding:16px 0 8px;font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px">TODAY&rsquo;S BEST</td></tr>`
         + sweepBanner(teams)
         + leadersBlock(leaders, leaderStyle))
-    + `<tr><td style="padding:${leaderStyle === "off" ? 16 : 10}px 0 8px;font:700 11px/1.2 ${F};color:${MUT};letter-spacing:1.1px">EVERY AE, BY TEAM</td></tr>`
+    + `<tr><td style="padding:${leaderStyle === "off" ? 14 : 10}px 0 0;font-size:0;line-height:0">&nbsp;</td></tr>`
     + `<tr><td>${tbl(`width="100%"`, cards)}</td></tr>`
-    + `<tr><td style="padding:6px 20px 0;font:400 11.5px/1.6 ${F};color:${MUT}">`
+    + `<tr><td style="padding:6px 20px 0;font-family:${F};font-size:11.5px;font-weight:400;line-height:1.6;color:${MUT}">`
     + `A day counts as hit on any one of: ${SUB_GOAL}+ submission, ${TIX_GOAL}+ tickets, ${CALLS_GOAL}+ calls, or ${TALK_GOAL}+ minutes talk time. `
     + `&ldquo;To go&rdquo; shows the line that AE is closest to. Sales managers and anyone out of office are excluded from the count.<br>`
     + `Figures from the ${esc(b.callsUpdatedLabel || "—")} call file and the ${esc(b.updatedLabel || "—")} production file. `
@@ -499,7 +553,7 @@ export function renderDigest(
     + `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>`
     + tbl(`width="100%" bgcolor="${PAGE}" style="background:${PAGE}"`,
       `<tr><td align="center" style="padding:18px 12px 26px">`
-      + tbl(`width="600" style="width:600px;max-width:600px"`, inner) + `</td></tr>`)
+      + tbl(`width="${PAGE_W}" style="width:${PAGE_W}px;max-width:${PAGE_W}px"`, inner) + `</td></tr>`)
     + `</body></html>`;
 
   return { subject: `Daily goal ${opts.sendLabel} — ${hit} of ${total} hit (${pct}%)`, preheader, html };
