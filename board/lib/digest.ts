@@ -302,7 +302,7 @@ function aeRow(a: AE) {
       ? chip("&#10003;", HIT_BG, HIT_RING, HIT_DEEP)
       : a.gap
         ? `<span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#8a4b12;background:#fbeed6;border-radius:9px;padding:3px 8px;white-space:nowrap">${a.gap}</span>`
-        : `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#98a2b1">awaiting data</span>`;
+        : chip("&ndash;", "#f1f4f7", "#dde3ea", "#9aa4b2");
   return `<tr><td width="${W.name}%" style="font-family:${F};font-size:12.5px;font-weight:${a.met ? 700 : 400};line-height:1.3;color:${a.met ? INK : "#7b8698"};padding:4px 0 4px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
     + num(a.callsTxt, a.cH, W.calls) + num(a.talkTxt, a.tH, W.talk) + num(a.tixTxt, a.xH, W.tix) + num(String(a.subs), a.sH, W.subs)
     + num(String(a.doc), false, W.doc) + num(String(a.uw), false, W.uw)
