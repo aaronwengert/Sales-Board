@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBoard } from "@/lib/fetch";
 import { renderDigest, dialSpecs, paceFraction } from "@/lib/digest";
 import { dialSvg, dialDataUri, DIAL_BG } from "@/lib/dial";
+import { TEAM_LOGOS, teamLogoCid, teamLogoSrcs } from "@/lib/teamLogos";
 import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 import type { Channel } from "@/lib/board";
 
@@ -61,11 +62,19 @@ export async function GET(req: NextRequest) {
     const dialSrc: Record<string, string> = {};
     for (const d of dials) dialSrc[d.key] = asJson ? `cid:dial-${d.key}` : dialDataUri(d);
 
+    // Team marks ride the same rails as the dials: data: URIs in a browser,
+    // cid: references in a message whose parts the mailer attaches.
+    const logos = teamLogoSrcs(asJson ? "cid" : "data");
+
     const digest = renderDigest(board, {
       sendLabel: q.get("at") || az.send,
       dateLabel: az.date,
       boardUrl: channel === "wholesale" ? origin : `${origin}/${channel}`,
       dialSrc, pace,
+      photos: { logos },
+      // The standings list up top keeps its rank numbers; the mark belongs to
+      // the card header, where it has room to be a mark rather than a speck.
+      logoStyle: "off",
     });
 
     if (asJson) {
@@ -83,6 +92,9 @@ export async function GET(req: NextRequest) {
           value: d.value, goal: d.goal, pct: d.pct, pending: d.pending,
           unit: d.unit, color: d.color, track: d.track, bg: DIAL_BG, svg: dialSvg(d),
         })),
+        // Attach each inline with Content-ID <team-SLUG>; the HTML already
+        // references cid:team-SLUG. `png` is base64 of a 124px PNG.
+        logos: TEAM_LOGOS.map((l) => ({ cid: teamLogoCid(l.slug), team: l.team, slug: l.slug, png: l.b64 })),
         callsPending: board.callsPending, tixPending: board.tixPending,
         updatedLabel: board.updatedLabel, callsUpdatedLabel: board.callsUpdatedLabel,
       });

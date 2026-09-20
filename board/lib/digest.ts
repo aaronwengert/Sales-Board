@@ -29,7 +29,12 @@ type AE = {
    *  a hit the denominator never counted. */
   exempt: boolean;
 };
-type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hidden: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }[]; manager: string | null; hit: number; n: number; pct: number };
+type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[]; hidden: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }[]; manager: string | null; hit: number; n: number; pct: number;
+  /** Every dollar on the team's desks, in dollars. Summed from the same
+   *  board rows the tiles use, and over EVERY member — managers, dashed
+   *  reps and anyone out of office included — because a team's book does
+   *  not shrink because someone is not being scored today. */
+  pipe: number };
 
 /** Team rollups, using exactly the board's inclusion rules. */
 export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: number; pct: number } {
@@ -39,8 +44,12 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
 
   for (const r of b.rows) {
     const name = r[0], team = teamOf(r[1]);
-    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0 });
+    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0, pipe: 0 });
     const g = byTeam.get(team)!;
+    // Pipeline is banked first, ahead of every early continue below: an OOO rep
+    // or a sales manager still has a book, and dropping it here would quietly
+    // understate the team.
+    g.pipe += r[2] || 0;
     const raw = b.today[name] || [0, 0, 0];
     const st = b.stage?.[name] || [0, 0];
     const asHidden = () => g.hidden.push({
@@ -248,6 +257,12 @@ const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"
 const tbl = (attrs: string, inner: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" border="0" ${attrs}>${inner}</table>`;
 const tone = (p: number) => (p >= 75 ? GRN : p >= 40 ? "#c08a1a" : "#a8443c");
+/** Header-band money. $12.4M reads at a glance; $12,438,201 does not, and a
+ *  full-precision number would force the band wider than a phone can give it. */
+const mny = (v: number) =>
+  v >= 1e6 ? `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)}M`
+  : v >= 1e3 ? `$${Math.round(v / 1e3)}K`
+  : `$${Math.round(v)}`;
 
 /** A bar drawn from two table cells — the only kind Outlook renders reliably. */
 function bar(pct: number, color: string, w: number | "100%", h: number) {
@@ -568,6 +583,9 @@ export function renderDigest(
     /** 1 (the default) stacks the team cards full width; 2 runs them two across.
      *  Two across cannot carry all seven metric columns legibly. */
     columns?: 1 | 2;
+    /** Edge length of the team mark in the card header, in px. Defaults to 62;
+     *  the mobile rule steps it down so the band keeps its two stats. */
+    teamLogoPx?: number;
   },
 ): Digest {
   const { teams, hit, total, pct } = digestTeams(b);
@@ -642,8 +660,13 @@ export function renderDigest(
     const pstyle = opts.teamPhotoStyle || "thumb";
     const clean = g.n > 0 && g.hit === g.n;
     const lg = (opts.photos?.logos || {})[g.team];
+    // The team mark. Sized in a fixed-width cell so a blocked or missing image
+    // leaves the band's geometry intact rather than collapsing the name into
+    // the pipeline figure. Square, because the artwork is already round.
+    const LPX = opts.teamLogoPx || 62;
     const logoCell = lg
-      ? `<td width="34" valign="middle" style="width:34px"><img src="${esc(lg)}" width="26" height="26" alt="" style="display:block;width:26px;height:26px" /></td>`
+      ? `<td width="${LPX + 10}" valign="middle" class="mlogo" style="width:${LPX + 10}px">`
+        + `<img src="${esc(lg)}" width="${LPX}" height="${LPX}" alt="" style="display:block;width:${LPX}px;height:${LPX}px;border:0" /></td>`
       : "";
     const shot = tp && pstyle === "thumb"
       ? `<td width="62" valign="middle" style="width:62px"><img src="${esc(tp)}" width="54" height="32" alt="" style="display:block;width:54px;height:32px" /></td>`
@@ -651,17 +674,26 @@ export function renderDigest(
     const bnr = tp && pstyle === "banner"
       ? `<tr><td style="font-size:0;line-height:0"><img src="${esc(tp)}" width="342" height="86" alt="" style="display:block;width:100%;max-width:342px;height:auto" /></td></tr>`
       : "";
+    // Two right-hand stats, each a caps label over a number. Both are nowrap:
+    // the band may run out of room on a narrow phone, and a wrapped "$12.4M"
+    // is worse than a team name that takes a second line.
+    const statCell = (label: string, value: string, ink: string, padLeft: number) =>
+      `<td align="right" valign="middle" style="padding-left:${padLeft}px">`
+      + `<div style="font-family:${F};font-size:8.5px;font-weight:800;line-height:1.2;color:#68737f;letter-spacing:.7px;white-space:nowrap">${label}</div>`
+      + `<div style="font-family:${F};font-size:16px;font-weight:800;line-height:1.25;color:${ink};white-space:nowrap;padding-top:1px">${value}</div></td>`;
     return tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
       bnr
-      + `<tr><td bgcolor="${band.bg}" style="background:${band.bg};padding:10px 12px 9px;border-bottom:2px solid ${c}">`
+      + `<tr><td bgcolor="${band.bg}" style="background:${band.bg};padding:9px 12px;border-bottom:2px solid ${c}">`
       + tbl(`width="100%"`,
-        `<tr>${shot}${logoCell}<td valign="middle" style="padding-left:${shot || logoCell ? 4 : 0}px">`
-        + `<div style="font-family:${F};font-size:14px;font-weight:800;line-height:1.2;color:${INK};letter-spacing:-.2px">${esc(g.team)}`
+        `<tr>${shot}${logoCell}<td valign="middle" width="100%" style="width:100%;padding-left:${shot || logoCell ? 2 : 0}px">`
+        + `<div style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${INK};letter-spacing:-.2px">${esc(g.team)}`
         + (clean ? ` <span style="font-family:${F};font-size:9.5px;font-weight:700;line-height:1;color:#0b5c2c;background:#d6f0e0;padding:2px 6px;letter-spacing:.4px">&#10003; ALL IN</span>` : "")
         + `</div>`
         + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#6f7d8c;padding-top:1px">${esc(g.manager)}</div>` : "")
         + `</td>`
-        + `<td align="right" valign="middle" width="46" style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${clean ? GRN : c};white-space:nowrap">${g.hit}/${g.n}</td></tr>`)
+        + statCell("PIPELINE", mny(g.pipe), INK, 10)
+        + statCell("ON GOAL", `${g.hit}/${g.n}`, clean ? GRN : c, 14)
+        + `</tr>`)
       + `</td></tr><tr><td style="padding:8px 0 0">${tbl(`width="100%" style="table-layout:fixed;width:100%"`, rows)}</td></tr>`);
   };
 
@@ -768,6 +800,11 @@ export function renderDigest(
     + `.mstack{display:block !important;width:100% !important;text-align:left !important}`
     + `.mcenter{text-align:center !important;padding-left:0 !important}`
     + `.mleft table{margin:6px 0 0 !important}`
+    // A phone gives the header band ~350px. Stepping the mark down buys back
+    // the width that keeps the pipeline figure beside the team name rather
+    // than pushed under it, and keeps the band from eating the fold.
+    + `.mlogo{width:58px !important}`
+    + `.mlogo img{width:50px !important;height:50px !important}`
     + `}</style>`
     + `<title>${esc(opts.sendLabel)} daily goal</title></head>`
     + `<body style="margin:0;padding:0;background:${PAGE}">`

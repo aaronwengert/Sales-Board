@@ -22,6 +22,7 @@ Usage:
 """
 
 import argparse
+import base64
 import json
 import logging
 import os
@@ -316,6 +317,18 @@ def send_digest(cfg: dict, payload: dict, to: list[str] | None = None,
             continue
         html_part.add_related(png, maintype="image", subtype="png",
                               cid="<%s>" % dial["cid"], filename=dial["cid"] + ".png")
+
+    # Team marks. These arrive already rendered — base64 PNG straight from the
+    # board — so there is nothing to draw and nothing to get wrong; a bad part
+    # costs one logo, not the send.
+    for logo in payload.get("logos", []):
+        try:
+            png = base64.b64decode(logo["png"])
+        except Exception as exc:                       # noqa: BLE001
+            log.warning("logo %s not attached (%s)", logo.get("slug"), exc)
+            continue
+        html_part.add_related(png, maintype="image", subtype="png",
+                              cid="<%s>" % logo["cid"], filename=logo["cid"] + ".png")
 
     with smtplib.SMTP(e["smtp_host"], e.get("smtp_port", 587)) as s:
         s.starttls()
