@@ -23,8 +23,12 @@ const TICKETS = process.env.TICKETS_FOLDER_ID || "1BUT5Qxv4LNX-tGSJ5JTgfYB-baQbK
 // End blank means a single day. Dates may be YYYY-MM-DD or M/D/YYYY. Rows are
 // evaluated against the Arizona business day, so a range covers whole days.
 //
-// OOO_URL is the optional second source, for when the projections app is ready
-// to serve the same information; the sheet wins if both are configured.
+// OOO_URL is the projections app: set it to https://<projections host>/api/ooo
+// and OOO_KEY to the same value as that deployment's OOO_KEY. It serves
+// { date, ooo: [names] } for the day the board asks for.
+//
+// All three sources are merged, not ranked — see fetchOOO below. Each is
+// independent, so leaving one unset simply drops it from the union.
 const OOO_SHEET_ID = process.env.OOO_SHEET_ID || "";
 const OOO_URL = process.env.OOO_URL || "";
 const OOO_KEY = process.env.OOO_KEY || "";
@@ -126,22 +130,53 @@ async function oooFromUrl(today: string): Promise<string[]> {
   return Array.isArray(j?.ooo) ? j.ooo.filter((n: any) => typeof n === "string") : [];
 }
 
+/** Whoever the /ooo screen's own store says is out today. */
+async function oooFromStore(): Promise<string[]> {
+  return namesOn(await readEntries(), oooToday());
+}
+
 /**
- * Who is out today. Sources in priority order:
- *   1. the /ooo screen's own store (Vercel Blob) — the normal path
- *   2. a Google Sheet, if OOO_SHEET_ID is set
- *   3. an external endpoint, if OOO_URL is set (e.g. the projections app later)
+ * Who is out today, from every source that is configured.
  *
- * Nobody-is-out is the safe default: any failure here leaves the board as-is.
+ * A UNION, not a priority order. These are three genuinely different entry
+ * points — the /ooo screen where a manager books someone's week of vacation,
+ * a Google Sheet for whoever would rather use a spreadsheet, and the
+ * projections app where an AE marks a single day from their phone — and a
+ * name from any of them is equally true. Ranking them meant the Blob store,
+ * once connected, silently discarded the other two, so an absence entered
+ * anywhere else simply never reached the board.
+ *
+ * Each source is isolated with allSettled: one failing or timing out never
+ * suppresses the others, and every source failing leaves "nobody is out",
+ * which is the safe default the board already assumed.
  */
 async function fetchOOO(): Promise<string[]> {
   const today = azTodayISO();
-  try {
-    if (storeConfigured()) return namesOn(await readEntries(), oooToday());
-    if (OOO_SHEET_ID) return await oooFromSheet(Number(today.replace(/-/g, "")));
-    if (OOO_URL) return await oooFromUrl(today);
-  } catch { /* fall through */ }
-  return [];
+  const jobs: Promise<string[]>[] = [];
+  if (storeConfigured()) jobs.push(oooFromStore());
+  if (OOO_SHEET_ID) jobs.push(oooFromSheet(Number(today.replace(/-/g, ""))));
+  if (OOO_URL) jobs.push(oooFromUrl(today));
+  if (jobs.length === 0) return [];
+
+  const settled = await Promise.allSettled(jobs);
+
+  // Dedupe case-insensitively, keeping the first spelling seen. The same
+  // person marked out in two places must not appear twice, and downstream
+  // matching (computeBoard, the digest) is case-insensitive anyway.
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const r of settled) {
+    if (r.status !== "fulfilled") continue;
+    for (const raw of r.value) {
+      const name = String(raw ?? "").trim();
+      if (!name) continue;
+      const k = name.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(name);
+    }
+  }
+  return out;
 }
 
 function emptyBoard(channel: Channel): BoardData {

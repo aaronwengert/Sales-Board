@@ -1,0 +1,31 @@
+# Dependencies
+board/node_modules/
+
+# Build output
+board/.next/
+board/out/
+board/tsconfig.tsbuildinfo
+
+# Local env — SMTP_PASSWORD, REPORT_KEY, OOO_KEY and the Google service
+# account key belong in Vercel and GitHub Secrets, never in the repo
+.env
+.env*.local
+board/.env
+board/.env*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local digest renders
+digest_preview.html
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Vercel
+board/.vercel
