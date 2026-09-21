@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { rollRange, businessDays, defaultWeek, rangeLabel } from "@/lib/rollup";
+import { rollRange, businessDays, defaultWeek, previousWeek, rangeLabel } from "@/lib/rollup";
 import { renderWeekly, weekDials } from "@/lib/weekly";
 import { dialSvg, dialDataUri } from "@/lib/dial";
 import { teamLogoSrcs, TEAM_LOGOS, teamLogoCid } from "@/lib/teamLogos";
@@ -41,7 +41,11 @@ export async function GET(req: NextRequest) {
 
   const channel = (q.get("channel") || "wholesale") as Channel;
   const asJson = q.get("format") === "json";
-  const def = defaultWeek(azParts().day);
+  // week=last is what a Monday-morning recap asks for: the week that just
+  // finished, not the one that started this morning. Explicit from/to still
+  // wins over both, for re-running a specific week by hand.
+  const base = defaultWeek(azParts().day);
+  const def = q.get("week") === "last" ? previousWeek(base) : base;
   const from = q.get("from") || def.from;
   const to = q.get("to") || def.to;
 

@@ -1,0 +1,68 @@
+name: Weekly recap
+
+# The week-in-review email. Dispatched from cron-job.org exactly like the daily
+# digest — GitHub's own `schedule:` is not dependable at the top of the hour,
+# and this one only fires once a week, so a missed run is a missed week.
+#
+#   week: ""      the week in progress  -> what a FRIDAY EVENING send wants
+#   week: "last"  the week just finished -> what a MONDAY MORNING send wants
+#
+# This fires Friday at 6:10 PM Arizona, so the default is blank: at that moment
+# the week in progress IS the week being recapped, and its last production
+# snapshot (5:00 PM) is already in. The "last" option is kept for re-running a
+# week after the fact, or if the send ever moves to a Monday — where a blank
+# week would recap a week that is ninety minutes old and empty.
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Which week: blank = week in progress (the Friday-evening send), "last" = the week just finished'
+        required: false
+        default: ''
+      to:
+        description: 'Test recipients (comma or space separated). Leave blank to send to the real list.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'true = render only, do not send'
+        required: false
+        default: 'false'
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pillow
+
+      - name: Send weekly recap
+        env:
+          REPORT_KEY: ${{ secrets.REPORT_KEY }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MERIDIAN_PASSWORD: ${{ secrets.MERIDIAN_PASSWORD }}
+          DIGEST_TO: ${{ inputs.to }}
+          DIGEST_WEEK: ${{ inputs.week }}
+          DIGEST_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # Built as an env var rather than interpolated into the command line:
+          # a recipient list with a space in it would otherwise be split by the
+          # shell and the job would die on an unknown argument.
+          ARGS="--weekly --force"
+          if [ "$DIGEST_DRY_RUN" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "$DIGEST_WEEK" ]; then ARGS="$ARGS --week $DIGEST_WEEK"; fi
+          python meridian_report_bot.py $ARGS
+
+      - name: Upload preview on a dry run
+        if: ${{ inputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-preview
+          path: weekly_preview.html
+          if-no-files-found: ignore

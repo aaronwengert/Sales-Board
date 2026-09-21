@@ -15,6 +15,7 @@
 import {
   F, INK, MUT, LINE, GRN, PAGE, PAGE_W, GOLD, GOLD_BG, GOLD_LINE,
   BANDS, DIAL_GOALS, ATTENDANCE_FLOOR, n, esc, tbl, tone, bar, strip, DIAL_PX,
+  W, CARD_PAD, headCell, mny,
   type DialSpec,
 } from "./digest";
 
@@ -34,12 +35,25 @@ export type DayRoll = {
   partial?: boolean;
 };
 
+/** One person's week. `daysScored` is the denominator that matters: a rep who
+ *  was out Tuesday is judged on four days, not punished for five. */
+export type WeekAE = {
+  name: string; team: string;
+  calls: number; talk: number; tix: number; subs: number; doc: number; uw: number;
+  daysHit: number; daysScored: number;
+  /** Days present but not being scored at all — a sales manager, or the
+   *  board's goal-exempt rule. Those people print numbers and no fraction. */
+  exempt: boolean;
+};
+
 export type WeekTeam = {
   team: string; manager: string | null;
   calls: number; talk: number; tix: number; subs: number; doc: number; uw: number;
   /** AE-days on goal over AE-days scored — the week's version of "6 of 10". */
   onGoal: number; slots: number;
   pipe: number;
+  /** Everyone who carried a row this week, in the order the card should print. */
+  aes: WeekAE[];
 };
 
 export type Weekly = { subject: string; preheader: string; html: string };
@@ -216,6 +230,101 @@ function dialsBlock(dials: ReturnType<typeof weekDials>, band: { bg: string; lin
     + `</td></tr>`;
 }
 
+/** Column headings for a week card. Same widths as the daily email's rows, so
+ *  the two emails read as one system — only the last column differs, because
+ *  a week ends in "4 of 5 days" where a day ends in a check or a gap. */
+const weekHead = () =>
+  `<tr>${headCell("", W.name)}${headCell("CALLS", W.calls)}${headCell("TALK", W.talk)}`
+  + `${headCell("TIX", W.tix)}${headCell("SUBS", W.subs)}${headCell("DOC", W.doc)}`
+  + `${headCell("UW", W.uw)}${headCell("DAYS", W.stat, CARD_PAD)}</tr>`;
+
+/** One person's week.
+ *
+ *  The fraction on the right is the point of the row: 4/5 and 4/4 are both
+ *  good weeks, and the denominator is what stops a rep who took Tuesday off
+ *  from reading as someone who missed a day. */
+function weekAeRow(a: WeekAE): string {
+  const strong = (v: number, on: boolean) =>
+    `<td width="${on ? 0 : 0}%" align="right" style="font-family:${F};font-size:12.5px;font-weight:${on ? 800 : 400};`
+    + `line-height:1.3;color:${on ? INK : "#9aa4b2"};padding:6px 0 6px 3px;border-bottom:1px solid #f4f6fa">${n(v)}</td>`;
+  const cell = (v: number, w: number, on: boolean, padRight = 0) =>
+    `<td width="${w}%" align="right" style="font-family:${F};font-size:12.5px;font-weight:${on ? 800 : 400};`
+    + `line-height:1.3;color:${on ? INK : "#9aa4b2"};padding:6px ${padRight}px 6px 3px;border-bottom:1px solid #f4f6fa">${n(v)}</td>`;
+  const pct = a.daysScored ? a.daysHit / a.daysScored : 0;
+  const full = a.daysScored > 0 && a.daysHit === a.daysScored;
+  const ink = a.exempt ? "#9aa4b2" : full ? "#0b5c2c" : pct >= 0.6 ? "#127a3c" : pct >= 0.4 ? "#8a4b12" : "#8d2b2b";
+  const bg = a.exempt ? "transparent" : full ? "#e4f5ea" : pct >= 0.6 ? "#eef8f1" : pct >= 0.4 ? "#fbeed6" : "#fbe9e9";
+  const days = a.exempt || !a.daysScored
+    ? `<span style="font-family:${F};font-size:11px;font-weight:600;line-height:1;color:#b6bfcb">&ndash;</span>`
+    : `<span style="font-family:${F};font-size:11.5px;font-weight:800;line-height:1;color:${ink};`
+      + `background:${bg};border-radius:9px;padding:3px 7px;white-space:nowrap">${a.daysHit}/${a.daysScored}</span>`;
+  return `<tr>`
+    + `<td width="${W.name}%" style="font-family:${F};font-size:12.5px;font-weight:${full ? 700 : 400};line-height:1.3;`
+    + `color:${a.exempt ? "#6f7d8c" : INK};padding:6px 0 6px ${CARD_PAD}px;border-bottom:1px solid #f4f6fa">${esc(a.name)}</td>`
+    + cell(a.calls, W.calls, a.calls > 0) + cell(a.talk, W.talk, a.talk > 0)
+    + cell(a.tix, W.tix, a.tix > 0) + cell(a.subs, W.subs, a.subs > 0)
+    + cell(a.doc, W.doc, a.doc > 0) + cell(a.uw, W.uw, a.uw > 0)
+    + `<td width="${W.stat}%" align="right" style="padding:6px ${CARD_PAD}px 6px 3px;border-bottom:1px solid #f4f6fa">${days}</td>`
+    + `</tr>`;
+}
+
+function weekTotalRow(g: WeekTeam, band: { bg: string; line: string; ink: string }): string {
+  const cell = (v: string, w: number, padRight = 0) =>
+    `<td width="${w}%" align="right" style="background:${band.bg};border-top:1px solid ${band.line};`
+    + `font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${INK};padding:6px ${padRight}px 6px 3px">${v}</td>`;
+  return `<tr><td width="${W.name}%" style="font-family:${F};font-size:11px;font-weight:700;line-height:1.3;color:${band.ink};`
+    + `letter-spacing:.7px;padding:6px 0 6px ${CARD_PAD}px;background:${band.bg};border-top:1px solid ${band.line}">TEAM</td>`
+    + cell(n(g.calls), W.calls) + cell(n(g.talk), W.talk) + cell(n(g.tix), W.tix)
+    + cell(n(g.subs), W.subs) + cell(n(g.doc), W.doc) + cell(n(g.uw), W.uw)
+    + `<td width="${W.stat}%" align="right" style="background:${band.bg};border-top:1px solid ${band.line};`
+    + `font-family:${F};font-size:13px;font-weight:800;line-height:1.3;color:${tone(g.slots ? Math.round(g.onGoal / g.slots * 100) : 0)};`
+    + `padding:6px ${CARD_PAD}px 6px 3px;white-space:nowrap">${g.slots ? Math.round(g.onGoal / g.slots * 100) : 0}%</td></tr>`;
+}
+
+/** A full week card per team: the header band the daily email uses, then every
+ *  person on the team with their week totals. */
+function teamCards(teams: WeekTeam[], band: { bg: string; line: string; ink: string }, logos: Record<string, string>, logoPx: number): string {
+  const ranked = [...teams].sort((a, b) => {
+    const pa = a.slots ? a.onGoal / a.slots : 0, pb = b.slots ? b.onGoal / b.slots : 0;
+    return pb - pa || b.slots - a.slots || a.team.localeCompare(b.team);
+  });
+  return ranked.map((g) => {
+    const pct = g.slots ? Math.round(g.onGoal / g.slots * 100) : 0;
+    const c = tone(pct);
+    const lg = logos[g.team];
+    const mark = lg
+      ? `<td width="${logoPx + 10}" valign="middle" class="mlogo" style="width:${logoPx + 10}px">`
+        + `<img src="${esc(lg)}" width="${logoPx}" height="${logoPx}" alt="" style="display:block;width:${logoPx}px;height:${logoPx}px;border:0" /></td>`
+      : "";
+    const stat = (label: string, value: string, ink: string, padLeft: number) =>
+      `<td align="right" valign="middle" style="padding-left:${padLeft}px">`
+      + `<div style="font-family:${F};font-size:8.5px;font-weight:800;line-height:1.2;color:#68737f;letter-spacing:.7px;white-space:nowrap">${label}</div>`
+      + `<div style="font-family:${F};font-size:16px;font-weight:800;line-height:1.25;color:${ink};white-space:nowrap;padding-top:1px">${value}</div></td>`;
+    // Ordered by the week they had, then alphabetically — the same "who is in,
+    // then who is working" reading the daily card uses.
+    const aes = [...g.aes].sort((a, b) => {
+      const pa = a.daysScored ? a.daysHit / a.daysScored : -1, pb = b.daysScored ? b.daysHit / b.daysScored : -1;
+      return pb - pa || b.daysHit - a.daysHit || a.name.localeCompare(b.name);
+    });
+    const card = tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
+      `<tr><td bgcolor="${band.bg}" style="background:${band.bg};padding:9px 12px;border-bottom:2px solid ${c}">`
+      + tbl(`width="100%"`,
+        `<tr>${mark}<td valign="middle" width="100%" style="width:100%;padding-left:${mark ? 2 : 0}px">`
+        + `<div style="font-family:${F};font-size:15px;font-weight:800;line-height:1.2;color:${INK};letter-spacing:-.2px">${esc(g.team)}</div>`
+        + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#6f7d8c;padding-top:1px">${esc(g.manager)}</div>` : "")
+        + `</td>`
+        + stat("PIPELINE", mny(g.pipe), INK, 10)
+        + stat("AE-DAYS", `${g.onGoal}/${g.slots}`, c, 14)
+        + `</tr>`)
+      + `</td></tr>`
+      + `<tr><td style="padding:8px 0 0">`
+      + tbl(`width="100%" style="table-layout:fixed;width:100%"`,
+        weekHead() + aes.map(weekAeRow).join("") + weekTotalRow(g, band))
+      + `</td></tr>`);
+    return `<tr><td style="padding:0 0 10px">${card}</td></tr>`;
+  }).join("");
+}
+
 function teamBlock(teams: WeekTeam[], band: { bg: string; line: string; ink: string }, logos: Record<string, string>, logoPx: number): string {
   const ranked = [...teams].sort((a, b) => {
     const pa = a.slots ? a.onGoal / a.slots : 0, pb = b.slots ? b.onGoal / b.slots : 0;
@@ -303,7 +412,8 @@ export function renderWeekly(
     + dialsBlock(dials, band, opts.dialSrc)
     + gridBlock(days, band)
     + note
-    + teamBlock(teams, band, opts.photos?.logos || {}, opts.teamLogoPx || 44)
+    + `<tr><td style="padding:16px 0 8px;font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px">BY TEAM &mdash; EVERY AE, ALL WEEK</td></tr>`
+    + teamCards(teams, band, opts.photos?.logos || {}, opts.teamLogoPx || 52)
     + footer;
 
   const subject = `Week in Review ${opts.rangeLabel} — ${dials.map((d) => d.value).join("/")} — ${pct}% of AE-days on goal`;

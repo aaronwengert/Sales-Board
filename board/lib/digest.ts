@@ -279,9 +279,9 @@ export function bar(pct: number, color: string, w: number | "100%", h: number) {
 // totalled 402px, leaving the name column -56px — and under table-layout:fixed
 // that collapses to one character per line instead of merely cramping. These
 // hold at any card width and renormalise when mobile drops three columns.
-const W = { name: 36, calls: 10, talk: 10, tix: 7, subs: 9, doc: 7, uw: 7, stat: 14 };
-const CARD_PAD = 12;
-const headCell = (txt: string, w: number, padRight = 0, cls = "") =>
+export const W = { name: 36, calls: 10, talk: 10, tix: 7, subs: 9, doc: 7, uw: 7, stat: 14 };
+export const CARD_PAD = 12;
+export const headCell = (txt: string, w: number, padRight = 0, cls = "") =>
   `<td width="${w}%" class="mhead ${cls}" align="right" style="font-family:${F};font-size:8.5px;font-weight:800;`
   + `line-height:1.2;color:#5f6b7a;letter-spacing:0;white-space:nowrap;`
   + `padding:0 ${padRight}px 6px 3px">${txt}</td>`;
@@ -295,9 +295,9 @@ const headerRow = () =>
  *  scored wears the green pill, and the status column is the round check in its
  *  halo rather than the word HIT. Word's engine drops border-radius and draws
  *  both square, which still reads correctly. */
-const HIT_INK = "#127a3c", HIT_BG = "#e4f5ea", HIT_RING = "#9bdcb4", HIT_DEEP = "#0b5c2c";
+export const HIT_INK = "#127a3c", HIT_BG = "#e4f5ea", HIT_RING = "#9bdcb4", HIT_DEEP = "#0b5c2c";
 
-function chip(mark: string, bg: string, ring: string, ink: string) {
+export function chip(mark: string, bg: string, ring: string, ink: string) {
   return tbl(`width="22" style="width:22px;margin:0 0 0 auto"`,
     `<tr><td width="22" height="22" align="center" valign="middle" bgcolor="${bg}"`
     + ` style="width:22px;height:22px;background:${bg};border:1px solid ${ring};border-radius:11px;`

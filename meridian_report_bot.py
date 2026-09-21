@@ -291,6 +291,30 @@ def fetch_digest(cfg: dict) -> dict:
     return r.json()
 
 
+def fetch_weekly(cfg: dict, week: str = "") -> dict:
+    """The week-in-review payload.
+
+    Same shape as the daily digest — subject, html, dials, logos — so the
+    sender below does not care which one it was handed. `week` is passed
+    straight through: "last" asks for the week that just finished, which is
+    what a Monday-morning recap wants and what a Friday-night one does not.
+    """
+    d = cfg["digest"]
+    key = os.environ.get("REPORT_KEY", d.get("key", ""))
+    if not key:
+        log.error("REPORT_KEY is not set; /api/weekly will refuse the request.")
+        sys.exit(1)
+    params = {"format": "json", "key": key, "channel": d.get("channel", "wholesale")}
+    if week:
+        params["week"] = week
+    url = d["url"].rstrip("/") + "/api/weekly"
+    # Replaying five days means five production files off Drive, so this is
+    # slower than the daily fetch by an order of magnitude.
+    r = requests.get(url, params=params, timeout=180)
+    r.raise_for_status()
+    return r.json()
+
+
 def send_digest(cfg: dict, payload: dict, to: list[str] | None = None,
                 subject_prefix: str = "") -> None:
     e, d = cfg["email"], cfg["digest"]
@@ -360,6 +384,12 @@ def main() -> int:
     ap.add_argument("--force", action="store_true", help="ignore business-hours window")
     ap.add_argument("--digest", action="store_true",
                     help="send the daily-goal digest instead of the CSV export")
+    ap.add_argument("--weekly", action="store_true",
+                    help="send the week-in-review recap instead of the daily digest")
+    ap.add_argument("--week", default="",
+                    help="which week --weekly covers: 'last' for the week that just "
+                         "finished (what a Monday-morning send wants). Default is the "
+                         "week in progress, which is what a Friday-night send wants.")
     ap.add_argument("--to", action="append", default=None,
                     help="override the digest recipients (repeatable, or one comma-separated "
                          "list); implies a test send. DIGEST_TO does the same from the environment")
@@ -370,6 +400,32 @@ def main() -> int:
     # The digest runs on its own schedule and has its own weekend rule, which
     # the board decides (it knows the Arizona calendar). It does not share the
     # hourly export's business-hours window.
+    if args.weekly:
+        to = parse_recipients(args.to) or parse_recipients(os.environ.get("DIGEST_TO"))
+        try:
+            payload = fetch_weekly(cfg, args.week)
+        except Exception:
+            log.exception("Weekly fetch failed.")
+            return 1
+        if not payload.get("ok", True):
+            # No production snapshots for the range is a real answer, not a
+            # crash: a holiday week has nothing to recap.
+            log.info("Weekly skipped (%s).", payload.get("detail") or payload.get("error"))
+            return 0
+        if args.dry_run:
+            out = BASE_DIR / "weekly_preview.html"
+            out.write_text(payload["html"], encoding="utf-8")
+            log.info("Dry run: wrote %s (%s)", out, payload["subject"])
+            return 0
+        try:
+            if to:
+                log.info("Test send to %d recipient(s): %s", len(to), ", ".join(to))
+            send_digest(cfg, payload, to=to or None, subject_prefix="[TEST] " if to else "")
+        except Exception:
+            log.exception("Weekly send failed.")
+            return 1
+        return 0
+
     if args.digest:
         try:
             payload = fetch_digest(cfg)

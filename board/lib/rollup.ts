@@ -23,7 +23,7 @@
 
 import { computeBoard, type BoardData, type Channel } from "./board";
 import { digestTeams } from "./digest";
-import type { DayRoll, WeekTeam } from "./weekly";
+import type { DayRoll, WeekTeam, WeekAE } from "./weekly";
 import { readEntries, namesOn } from "./ooo";
 import { listAllCsvs, driveDownload, FOLDERS } from "./fetch";
 
@@ -109,6 +109,32 @@ export function rollFromCsvs(
     // did nothing, which is a worse lie than a dash.
     partial: !callsCsv || !tixCsv,
   };
+  // Per-person numbers come straight off the board rows rather than out of
+  // digestTeams, which folds managers and anyone out of office into an
+  // anonymous bucket. A week card has to name them: their production still
+  // counts toward the team even on a day they were not being scored.
+  const scoredToday = new Map<string, boolean>();
+  const exemptToday = new Set<string>();
+  for (const g of teams) for (const a of g.aes) {
+    if (a.exempt) exemptToday.add(a.name); else scoredToday.set(a.name, a.met);
+  }
+  const teamOf = (raw: string) => (raw || "").replace(/\s*·.*$/, "").trim() || "Unassigned";
+  const perAE = new Map<string, WeekAE>();
+  for (const r of b.rows) {
+    const name = r[0];
+    const td = b.today[name] || [0, 0, 0];
+    const st = b.stage?.[name] || [0, 0];
+    const scored = scoredToday.has(name);
+    perAE.set(name, {
+      name, team: teamOf(r[1]),
+      calls: td[0], talk: Math.round(td[1]), tix: b.tix[name] || 0, subs: td[2],
+      doc: st[0], uw: st[1],
+      daysHit: scored && scoredToday.get(name) ? 1 : 0,
+      daysScored: scored ? 1 : 0,
+      exempt: exemptToday.has(name),
+    });
+  }
+
   const wt: WeekTeam[] = teams.map((g) => {
     const all = [...g.aes, ...g.hidden];
     const sum = (f: (a: { calls: number; talk: number; tix: number; subs: number; doc: number; uw: number }) => number) =>
@@ -118,6 +144,7 @@ export function rollFromCsvs(
       calls: sum((a) => a.calls), talk: sum((a) => a.talk), tix: sum((a) => a.tix),
       subs: sum((a) => a.subs), doc: sum((a) => a.doc), uw: sum((a) => a.uw),
       onGoal: g.hit, slots: g.n, pipe: g.pipe,
+      aes: [...perAE.values()].filter((a) => a.team === g.team),
     };
   });
   return { roll, teams: wt, board: b };
@@ -132,6 +159,18 @@ export function mergeTeams(week: WeekTeam[], day: WeekTeam[]): WeekTeam[] {
     cur.calls += d.calls; cur.talk += d.talk; cur.tix += d.tix;
     cur.subs += d.subs; cur.doc += d.doc; cur.uw += d.uw;
     cur.onGoal += d.onGoal; cur.slots += d.slots;
+    // Per-person totals accumulate the same way the team's do; a name seen for
+    // the first time on Wednesday simply joins from Wednesday.
+    const byName = new Map(cur.aes.map((a) => [a.name, { ...a }]));
+    for (const a of d.aes) {
+      const prev = byName.get(a.name);
+      if (!prev) { byName.set(a.name, { ...a }); continue; }
+      prev.calls += a.calls; prev.talk += a.talk; prev.tix += a.tix;
+      prev.subs += a.subs; prev.doc += a.doc; prev.uw += a.uw;
+      prev.daysHit += a.daysHit; prev.daysScored += a.daysScored;
+      prev.exempt = prev.exempt || a.exempt;
+    }
+    cur.aes = [...byName.values()];
     // Pipeline is a level, not a flow: the week carries the latest reading
     // rather than five days of it added together.
     cur.pipe = d.pipe;
@@ -204,6 +243,24 @@ export function defaultWeek(today: string): { from: string; to: string } {
   const fri = new Date(mon); fri.setDate(fri.getDate() + 4);
   const fmt = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
   return { from: fmt(mon), to: fmt(fri) };
+}
+
+/** Shift a Monday–Friday range back one week.
+ *
+ *  This exists for the Monday-morning send. `defaultWeek` treats Monday as the
+ *  first day of the week in progress, which is right for a mid-week look at
+ *  the board and exactly wrong for a recap: a 7am Monday run would report the
+ *  week that started ninety minutes ago and find nothing in it. A Friday-night
+ *  send wants the default; a Monday-morning send wants this.
+ */
+export function previousWeek(w: { from: string; to: string }): { from: string; to: string } {
+  const back = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    const x = new Date(y, m - 1, d, 12);
+    x.setDate(x.getDate() - 7);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  };
+  return { from: back(w.from), to: back(w.to) };
 }
 
 /** "Sep 14 – 18", or "Sep 28 – Oct 2" across a month boundary. */
