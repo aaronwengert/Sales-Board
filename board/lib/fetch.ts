@@ -155,7 +155,29 @@ async function oooFromUrl(today: string): Promise<string[]> {
     cache: "no-store",
     signal: AbortSignal.timeout(4000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    /*
+     * Say something before giving up.
+     *
+     * This used to return an empty list on any non-OK response, which is the
+     * right BEHAVIOUR — one broken source must never blank the board — but it
+     * made a misconfiguration indistinguishable from a quiet day. A key that
+     * does not match the projections app returns 401 here, and the board
+     * showed exactly what it shows when nobody is out: nothing. There was no
+     * way to tell the two apart from outside, so a wrong key could sit there
+     * for months.
+     *
+     * The status is enough to diagnose it: 401 is a key mismatch, 503 is the
+     * far end not configured, a timeout is the far end down. Nothing secret
+     * is logged.
+     */
+    console.warn(
+      `[ooo] projections feed returned ${res.status} ${res.statusText} — ` +
+        `no names taken from it. 401 means OOO_KEY here does not match the ` +
+        `one on the projections deployment.`
+    );
+    return [];
+  }
   const j: any = await res.json();
   if (j?.date && j.date !== today) return [];      // never apply a stale list
   return Array.isArray(j?.ooo) ? j.ooo.filter((n: any) => typeof n === "string") : [];
