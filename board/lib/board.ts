@@ -258,10 +258,19 @@ function extractProd(csv: string): Record<string, string>[] {
   return parsed.data;
 }
 
-export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale", ticketsCsv: string | null = null, tixIsToday: boolean = false, oooNames: string[] = []): BoardData {
+export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsToday: boolean, updatedLabel: string, callsUpdatedLabel: string, channel: Channel = "wholesale", ticketsCsv: string | null = null, tixIsToday: boolean = false, oooNames: string[] = [], opts: {
+  /** Replay the board as of a past Arizona day instead of right now.
+   *
+   *  Every "today" in here — stage entries, subs opened, the reporting month,
+   *  the idle-aging bands — is derived from one clock read. Overriding that
+   *  clock and handing in the snapshot files from that day reproduces exactly
+   *  what the board showed that evening, which is what week-to-date is built
+   *  from. Left unset, this is the live board and nothing changes. */
+  asOf?: Date;
+} = {}): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
-  const az = azNow();
+  const az = opts.asOf || azNow();
   const todayM = az.getMonth() + 1, todayD = az.getDate(), todayY = az.getFullYear();
 
   // Reporting month = the CURRENT calendar month in Arizona, always.

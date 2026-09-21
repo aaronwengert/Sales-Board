@@ -11,11 +11,11 @@
 
 import type { BoardData } from "./board";
 
-const PAGE_W = 760;
+export const PAGE_W = 760;
 const CALLS_GOAL = 75, TALK_GOAL = 90, SUB_GOAL = 1, TIX_GOAL = 3;
 
-const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const INK = "#17233d", MUT = "#6b7686", LINE = "#d9e0ea", GRN = "#127a3c", PAGE = "#ffffff";
+export const F = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+export const INK = "#17233d", MUT = "#6b7686", LINE = "#d9e0ea", GRN = "#127a3c", PAGE = "#ffffff";
 
 type AE = {
   name: string; calls: number; talk: number; tix: number; subs: number; doc: number; uw: number;
@@ -174,7 +174,7 @@ export function digestLeaders(b: BoardData, teams: Team[]): Leader[] {
   });
 }
 
-const GOLD = "#9a7a10", GOLD_BG = "#fdf6dd", GOLD_LINE = "#e8d38f";
+export const GOLD = "#9a7a10", GOLD_BG = "#fdf6dd", GOLD_LINE = "#e8d38f";
 export const BANDS: Record<string, { bg: string; line: string; ink: string }> = {
   mint:  { bg: "#e3f0e7", line: "#c6e0d0", ink: "#5b6674" },
   sage:  { bg: "#dbe8de", line: "#b9d2c1", ink: "#44584c" },
@@ -251,21 +251,21 @@ const TILE_H = 86;
 }
 
 /** 1345 -> 1,345. Four-figure call counts are unreadable without it. */
-const n = (v: number | string) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+export const n = (v: number | string) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const tbl = (attrs: string, inner: string) =>
+export const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const tbl = (attrs: string, inner: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" border="0" ${attrs}>${inner}</table>`;
-const tone = (p: number) => (p >= 75 ? GRN : p >= 40 ? "#c08a1a" : "#a8443c");
+export const tone = (p: number) => (p >= 75 ? GRN : p >= 40 ? "#c08a1a" : "#a8443c");
 /** Header-band money. $12.4M reads at a glance; $12,438,201 does not, and a
  *  full-precision number would force the band wider than a phone can give it. */
-const mny = (v: number) =>
+export const mny = (v: number) =>
   v >= 1e6 ? `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)}M`
   : v >= 1e3 ? `$${Math.round(v / 1e3)}K`
   : `$${Math.round(v)}`;
 
 /** A bar drawn from two table cells — the only kind Outlook renders reliably. */
-function bar(pct: number, color: string, w: number | "100%", h: number) {
+export function bar(pct: number, color: string, w: number | "100%", h: number) {
   const fill = Math.max(2, Math.min(100, Math.round(pct)));
   const attrs = w === "100%"
     ? `width="100%" style="width:100%;border-collapse:collapse"`
@@ -369,7 +369,34 @@ export type DialSpec = {
   unit: string;
   /** Arc colour and the lighter tint of the same hue it runs over. */
   color: string; track: string;
+  /** Where a full day's work sits for TODAY's headcount, as a percent of the
+   *  standing goal. The goal itself never moves — this is the tick on the
+   *  track that says "reaching here is a full effort with this many people
+   *  out". Undefined when absences are below the floor and no context is due. */
+  adjPct?: number;
+  /** The same thing in whole units, for the caption under the row. */
+  adjGoal?: number;
 };
+
+/** How many people have to be out before the dials start showing an
+ *  attendance-adjusted mark. Two or three on PTO is an ordinary day and a mark
+ *  every single send would be noise; a sales meeting or a holiday week is not,
+ *  and that is the case worth annotating. */
+export const ATTENDANCE_FLOOR = 4;
+
+/** Absence context for a board: who is out, against the rostered headcount the
+ *  goals were set for. `show` is the floor test — everything downstream keys
+ *  off it, so the rule lives in exactly one place. */
+export function attendance(b: BoardData): { out: number; roster: number; available: number; frac: number; show: boolean } {
+  const roster = b.rows.length;
+  const out = (b.oooAEs || []).length;
+  const available = Math.max(0, roster - out);
+  // Downward only. A full room does not raise the bar above the standing goal,
+  // and neither does hiring — that would move the target without anyone
+  // deciding to move it.
+  const frac = roster > 0 ? Math.min(1, available / roster) : 1;
+  return { out, roster, available, frac, show: out >= ATTENDANCE_FLOOR && roster > 0 };
+}
 
 /** Arc over track, keyed off how far along the day is. Each track is the same
  *  hue as its arc, lightened — the reference look: one colour, two weights. */
@@ -396,12 +423,17 @@ export const PACE_BANDS = [
  *  both against a flat 30 would paint every morning email red and teach people
  *  to ignore the colour. The arc length still shows progress to goal, so the
  *  two readings stay independent: how far round, and what colour. */
-function dialTone(value: number, goal: number, pending: boolean, pace: number): { color: string; track: string } {
+function dialTone(value: number, goal: number, pending: boolean, pace: number, adjFrac = 1): { color: string; track: string } {
   const only = (p: { color: string; track: string }) => ({ color: p.color, track: p.track });
   if (pending) return { color: "#b6bfcb", track: "#eef1f5" };
   // Goal met is green whatever the clock says.
   if (goal && value >= goal) return only(PACE_BANDS[0]);
-  const expected = goal * pace;
+  // Colour answers "are we working hard enough", so it is judged against what
+  // today's room can actually do. The goal and the arc length still read
+  // against the standing 30/30/20/60 — only the verdict moves. Without this
+  // the adjusted mark would be decoration: a short-handed team would read red
+  // all day for turning in a full day's work.
+  const expected = goal * adjFrac * pace;
   // Before the day starts there is nothing to be behind on.
   const ratio = expected <= 0 ? 1 : value / expected;
   return only(PACE_BANDS.find((b) => ratio >= b.min) || PACE_BANDS[PACE_BANDS.length - 1]);
@@ -416,9 +448,18 @@ export function dialSpecs(b: BoardData, pace = 1): DialSpec[] {
     { key: "uw", label: "UW", value: b.kpi.uwToday ?? 0, goal: DIAL_GOALS.uw, pending: false },
     { key: "tix", label: "TIX", value: b.tixTotal ?? 0, goal: DIAL_GOALS.tix, pending: !!b.tixPending },
   ];
+  const att = attendance(b);
+  const frac = att.show ? att.frac : 1;
   return raw.map((r) => {
     const pct = r.pending || !r.goal ? 0 : Math.min(100, Math.round(r.value / r.goal * 100));
-    return { ...r, pct, unit: r.pending ? "awaiting" : "of " + r.goal, ...dialTone(r.value, r.goal, r.pending, pace) };
+    const adjGoal = Math.round(r.goal * frac);
+    return {
+      ...r, pct, unit: r.pending ? "awaiting" : "of " + r.goal,
+      ...dialTone(r.value, r.goal, r.pending, pace, frac),
+      // Only carried when the floor is crossed; an undefined tick draws nothing,
+      // so an ordinary day looks exactly as it does now.
+      ...(att.show && !r.pending ? { adjPct: Math.round(frac * 100), adjGoal } : {}),
+    };
   });
 }
 
@@ -426,7 +467,7 @@ export function dialSpecs(b: BoardData, pace = 1): DialSpec[] {
  *  A table cell can never wrap, which is why these are inline-block divs: the
  *  reflow costs no media query and so survives clients that strip <style>.
  *  Word's engine ignores inline-block, so ghost cells keep it side by side. */
-function strip(cells: string[], maxW: number, floorW = 132): string {
+export function strip(cells: string[], maxW: number, floorW = 132): string {
   const pct = Math.floor(100 / cells.length);
   return `<div style="font-size:0;line-height:0;text-align:center">`
     + `<!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><![endif]-->`
@@ -438,7 +479,7 @@ function strip(cells: string[], maxW: number, floorW = 132): string {
     + `</div>`;
 }
 
-const DIAL_PX = 112;
+export const DIAL_PX = 112;
 
 export type LegendStyle = "dots" | "bar" | "sentence" | "chips" | "off";
 
@@ -455,7 +496,7 @@ function paceLegend(style: LegendStyle, pace: number, band: { bg: string; line: 
     const word = (p: typeof PACE_BANDS[number]) =>
       `<span style="font-family:${F};font-size:10.5px;font-weight:700;color:${p.color}">${p.label.toLowerCase()}</span>`;
     return tbl(`width="100%"`,
-      `<tr><td style="${muted};font-size:10.5px">Dial colour shows pace against the clock &mdash; `
+      `<tr><td style="${muted};font-size:10.5px">Dial color shows pace against the clock &mdash; `
       + PACE_BANDS.map(word).join(`<span style="color:#b9c2cd">&nbsp;&middot;&nbsp;</span>`)
       + ` &mdash; with ${note}.</td></tr>`);
   }
@@ -526,9 +567,26 @@ function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string 
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTIVITY</td></tr>`)
     + strip(cells, 168)
+    + attendanceNote(b)
     + `<div style="height:14px;line-height:14px;font-size:0">&nbsp;</div>`
     + paceLegend(legend, pace, band)
     + `</td></tr>`;
+}
+
+/** The sentence that makes the notch mean something. Without it the mark is a
+ *  scratch on the ring; with it the reader knows the goal did not move and why
+ *  the colour is kinder than the arc length suggests. */
+function attendanceNote(b: BoardData): string {
+  const a = attendance(b);
+  if (!a.show) return "";
+  const g = DIAL_GOALS;
+  const at = (v: number) => Math.round(v * a.frac);
+  return `<div style="height:12px;line-height:12px;font-size:0">&nbsp;</div>`
+    + `<div style="font-family:${F};font-size:11px;font-weight:400;line-height:1.55;color:#5f6b7a;text-align:center;padding:0 8px">`
+    + `<span style="font-weight:700;color:${INK}">${a.out} of ${a.roster} out today.</span>`
+    + `&nbsp; Goals hold at ${g.subs}/${g.docCheck}/${g.uw}/${g.tix} &mdash; the mark on each ring shows a full day&rsquo;s `
+    + `work for the ${a.available} people here (${at(g.subs)}/${at(g.docCheck)}/${at(g.uw)}/${at(g.tix)}), and color is judged against it.`
+    + `</div>`;
 }
 
 /** Anyone who took all four categories in one day. Same gold-and-star language

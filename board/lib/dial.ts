@@ -24,7 +24,7 @@ const FONT = "Helvetica Neue,Helvetica,Arial,sans-serif";
 /** The strip the dials sit on is tinted, so the image has to be tinted too —
  *  a white square around each donut is the giveaway that these are pictures. */
 export function dialSvg(
-  d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" | "unit" | "color" | "track">,
+  d: Pick<DialSpec, "value" | "goal" | "pct" | "pending" | "unit" | "color" | "track"> & { adjPct?: number },
   bg: string = DIAL_BG,
 ): string {
   const frac = Math.max(0, Math.min(1, d.pct / 100));
@@ -37,10 +37,23 @@ export function dialSvg(
       + ` stroke-dasharray="${on} ${off}" stroke-linecap="butt" transform="rotate(-90 ${c} ${c})"/>`
     : "";
   const num = d.pending ? "&#8211;" : String(d.value);
+  // The attendance mark: where a full day's work lands for today's headcount.
+  //
+  // Drawn as a pin sitting ON the ring rather than a notch cut across it. A
+  // radial slash looks like the arc broke — and it lands closest to the arc's
+  // end precisely when the team is near the adjusted bar, which is the moment
+  // the reading matters most. A filled dot is unambiguous at any position.
+  let tick = "";
+  if (d.adjPct !== undefined && d.adjPct < 100) {
+    const a = (-90 + 3.6 * d.adjPct) * Math.PI / 180;
+    const x = (c + R * Math.cos(a)).toFixed(2), y = (c + R * Math.sin(a)).toFixed(2);
+    tick = `<circle cx="${x}" cy="${y}" r="7.5" fill="#ffffff" stroke="#39434f" stroke-width="3"/>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">`
     + `<rect width="${SIZE}" height="${SIZE}" fill="${bg}"/>`
     + `<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${d.track}" stroke-width="${STROKE}"/>`
     + arc
+    + tick
     + `<text x="${c}" y="${c + 6}" text-anchor="middle" font-family="${FONT}" font-size="58" font-weight="700"`
     + ` letter-spacing="-2" fill="${d.pending ? "#b6bfcb" : d.color}">${num}</text>`
     + `<text x="${c}" y="${c + 36}" text-anchor="middle" font-family="${FONT}" font-size="19" font-weight="600"`

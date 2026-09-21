@@ -45,6 +45,37 @@ function client() {
 
 type DFile = { id: string; name: string; modifiedTime: string };
 
+/** Every CSV in a folder, newest first, paging until `max` or exhaustion.
+ *  The live board only ever wants the newest file and so asks for 25; a week
+ *  replay has to reach back through five days of half-hourly snapshots, which
+ *  is several hundred. */
+export async function listAllCsvs(folderId: string, max = 1200): Promise<DFile[]> {
+  const d = client();
+  const out: DFile[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res: any = await d.files.list({
+      q: `'${folderId}' in parents and trashed = false and (mimeType = 'text/csv' or name contains '.csv')`,
+      fields: "nextPageToken, files(id,name,modifiedTime)",
+      orderBy: "modifiedTime desc",
+      pageSize: 1000,
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    for (const f of res.data.files || []) {
+      out.push({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || "" });
+      if (out.length >= max) return out;
+    }
+    pageToken = res.data.nextPageToken || undefined;
+  } while (pageToken);
+  return out;
+}
+
+export { download as driveDownload, azDateStr as azDayOf };
+export const FOLDERS = { prod: POWERBI, calls: CALLS, tickets: TICKETS };
+export function driveReady() { return hasCreds(); }
+
 async function listCsvs(folderId: string): Promise<DFile[]> {
   const d = client();
   const res: any = await d.files.list({
