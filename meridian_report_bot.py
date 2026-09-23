@@ -31,6 +31,7 @@ import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from email.message import EmailMessage
+from email.utils import formataddr
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -321,7 +322,16 @@ def send_digest(cfg: dict, payload: dict, to: list[str] | None = None,
     recipients = to or d.get("to") or e["to"]
 
     msg = EmailMessage()
-    msg["From"] = d.get("from", e["from"])
+    # A display name on the From header. The address still has to be the
+    # account SMTP authenticated as — Gmail rewrites anything else — but the
+    # name in front of it is free, and "Oaktree Productivity Updates" is what
+    # people see in a crowded inbox rather than a personal gmail address.
+    # formataddr rather than string concatenation: it quotes a name containing
+    # a comma or a period correctly, which is the difference between one
+    # sender and a header that parses as two.
+    from_addr = d.get("from", e["from"])
+    from_name = d.get("from_name") or e.get("from_name") or ""
+    msg["From"] = formataddr((from_name, from_addr)) if from_name else from_addr
     msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject_prefix + payload["subject"]
     # A text part is not decoration: a client that refuses HTML still gets the
