@@ -567,27 +567,11 @@ function dialsBlock(b: BoardData, band: { bg: string; line: string; ink: string 
     + tbl(`width="100%"`,
       `<tr><td style="font-family:${F};font-size:11px;font-weight:700;line-height:1.2;color:${MUT};letter-spacing:1.1px;padding:0 8px 14px">TODAY&rsquo;S PRODUCTIVITY</td></tr>`)
     + strip(cells, 168)
-    + attendanceNote(b)
     + `<div style="height:14px;line-height:14px;font-size:0">&nbsp;</div>`
     + paceLegend(legend, pace, band)
     + `</td></tr>`;
 }
 
-/** The sentence that makes the notch mean something. Without it the mark is a
- *  scratch on the ring; with it the reader knows the goal did not move and why
- *  the colour is kinder than the arc length suggests. */
-function attendanceNote(b: BoardData): string {
-  const a = attendance(b);
-  if (!a.show) return "";
-  const g = DIAL_GOALS;
-  const at = (v: number) => Math.round(v * a.frac);
-  return `<div style="height:12px;line-height:12px;font-size:0">&nbsp;</div>`
-    + `<div style="font-family:${F};font-size:11px;font-weight:400;line-height:1.55;color:#5f6b7a;text-align:center;padding:0 8px">`
-    + `<span style="font-weight:700;color:${INK}">${a.out} of ${a.roster} out today.</span>`
-    + `&nbsp; Goals hold at ${g.subs}/${g.docCheck}/${g.uw}/${g.tix} &mdash; the mark on each ring shows a full day&rsquo;s `
-    + `work for the ${a.available} people here (${at(g.subs)}/${at(g.docCheck)}/${at(g.uw)}/${at(g.tix)}), and color is judged against it.`
-    + `</div>`;
-}
 
 /** Anyone who took all four categories in one day. Same gold-and-star language
  *  the boards use for a clean sweep, run full width as the first thing under
@@ -851,6 +835,12 @@ export function renderDigest(
 ;
   const html = `<!doctype html><html><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
+    // The whole email is a light design, and the dial images have a light
+    // background baked in. Declaring the scheme stops Apple Mail and Outlook
+    // auto-inverting the text around those images and leaving them stranded.
+    + `<meta name="color-scheme" content="light">`
+    + `<meta name="supported-color-schemes" content="light">`
+    + `<style>:root{color-scheme:light only;supported-color-schemes:light}</style>`
     + `<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">`
     + `<style>@media only screen and (max-width:620px){`
     + `.mdrop{display:none !important;width:0 !important;max-width:0 !important;padding:0 !important;`

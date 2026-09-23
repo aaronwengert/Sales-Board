@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rollRange, businessDays, defaultWeek, previousWeek, rangeLabel } from "@/lib/rollup";
 import { renderWeekly, weekDials } from "@/lib/weekly";
 import { dialSvg, dialDataUri } from "@/lib/dial";
+import { dialPng, dialPngDataUri } from "@/lib/dialPng";
 import { teamLogoSrcs, TEAM_LOGOS, teamLogoCid } from "@/lib/teamLogos";
 import { BANDS } from "@/lib/digest";
 import { pinToken, AUTH_COOKIE } from "@/lib/pin";
@@ -58,8 +59,21 @@ export async function GET(req: NextRequest) {
     }
 
     const dials = weekDials(days);
+    let dialSource: "png" | "svg" = "png";
+    let dialArt: Record<string, string> = {};
+    try {
+      for (const d of dials) dialArt[d.key] = dialPng(d).toString("base64");
+    } catch (err) {
+      dialSource = "svg";
+      dialArt = {};
+      console.error("dial PNG render failed, falling back to SVG:", err);
+    }
     const dialSrc: Record<string, string> = {};
-    for (const d of dials) dialSrc[d.key] = asJson ? `cid:dial-${d.key}` : dialDataUri(d);
+    for (const d of dials) {
+      dialSrc[d.key] = asJson
+        ? `cid:dial-${d.key}`
+        : dialSource === "png" ? dialPngDataUri(d) : dialDataUri(d);
+    }
 
     const weekly = renderWeekly(days, teams, {
       rangeLabel: rangeLabel(from, to),
@@ -73,10 +87,13 @@ export async function GET(req: NextRequest) {
         ok: true,
         subject: weekly.subject, preheader: weekly.preheader, html: weekly.html,
         from, to,
+        dialSource,
         dials: dials.map((d) => ({
           cid: `dial-${d.key}`, key: d.key, label: d.label, value: d.value, goal: d.goal,
           pct: d.pct, pending: false, unit: d.unit, color: d.color, track: d.track,
-          bg: BANDS.stone.bg, svg: dialSvg(d),
+          bg: BANDS.stone.bg,
+          png: dialArt[d.key],
+          ...(dialSource === "svg" ? { svg: dialSvg(d) } : {}),
         })),
         logos: TEAM_LOGOS.map((l) => ({ cid: teamLogoCid(l.slug), team: l.team, slug: l.slug, png: l.b64 })),
         // The days actually replayed, so a caller can see at a glance that a

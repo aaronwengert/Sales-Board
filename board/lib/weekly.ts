@@ -421,6 +421,12 @@ export function renderWeekly(
 
   const html = `<!doctype html><html><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
+    // The whole email is a light design, and the dial images have a light
+    // background baked in. Declaring the scheme stops Apple Mail and Outlook
+    // auto-inverting the text around those images and leaving them stranded.
+    + `<meta name="color-scheme" content="light">`
+    + `<meta name="supported-color-schemes" content="light">`
+    + `<style>:root{color-scheme:light only;supported-color-schemes:light}</style>`
     + `<style>@media only screen and (max-width:620px){`
     + `.mdrop{display:none !important;width:0 !important;max-width:0 !important;padding:0 !important;`
     + `font-size:0 !important;line-height:0 !important;overflow:hidden !important}`

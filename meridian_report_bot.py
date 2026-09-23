@@ -333,7 +333,13 @@ def send_digest(cfg: dict, payload: dict, to: list[str] | None = None,
 
     for dial in payload.get("dials", []):
         try:
-            png = draw_dial(dial)
+            # The board draws the dials now and ships the bytes, so there is
+            # one donut renderer rather than two drifting apart — which is how
+            # the attendance mark ended up visible in the browser preview and
+            # missing from the mail for a week. draw_dial stays only as a net
+            # for the case where the board could not raster them.
+            supplied = dial.get("png")
+            png = base64.b64decode(supplied) if supplied else draw_dial(dial)
         except Exception as exc:                       # noqa: BLE001
             # The email falls back to a drawn ring when an image is missing, so
             # a font or Pillow problem costs decoration, not the send.

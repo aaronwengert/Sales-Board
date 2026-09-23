@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBoard } from "@/lib/fetch";
 import { renderDigest, dialSpecs, paceFraction } from "@/lib/digest";
 import { dialSvg, dialDataUri, DIAL_BG } from "@/lib/dial";
+import { dialPng, dialPngDataUri } from "@/lib/dialPng";
 import { TEAM_LOGOS, teamLogoCid, teamLogoSrcs } from "@/lib/teamLogos";
 import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 import type { Channel } from "@/lib/board";
@@ -59,8 +60,31 @@ export async function GET(req: NextRequest) {
     // 10am send is not uniformly red for the crime of being the 10am send.
     const pace = paceFraction(az.hour, az.minute);
     const dials = dialSpecs(board, pace);
+
+    // The dials are drawn here, once, as PNG. A consumer only has to attach
+    // the bytes — no SVG rasteriser, no fonts, no second implementation of
+    // this donut drifting away from the first.
+    //
+    // If the drawing fails — a native module missing on a new runtime, say —
+    // the endpoint does not: it falls back to the SVG and the numbers, which
+    // the mailer can still draw from. A degraded dial beats no email, and
+    // `dialSource` says which one you got rather than leaving you guessing.
+    let dialSource: "png" | "svg" = "png";
+    let dialArt: Record<string, string> = {};
+    try {
+      for (const d of dials) dialArt[d.key] = dialPng(d).toString("base64");
+    } catch (err) {
+      dialSource = "svg";
+      dialArt = {};
+      console.error("dial PNG render failed, falling back to SVG:", err);
+    }
+
     const dialSrc: Record<string, string> = {};
-    for (const d of dials) dialSrc[d.key] = asJson ? `cid:dial-${d.key}` : dialDataUri(d);
+    for (const d of dials) {
+      dialSrc[d.key] = asJson
+        ? `cid:dial-${d.key}`
+        : dialSource === "png" ? dialPngDataUri(d) : dialDataUri(d);
+    }
 
     // Team marks ride the same rails as the dials: data: URIs in a browser,
     // cid: references in a message whose parts the mailer attaches.
@@ -87,10 +111,15 @@ export async function GET(req: NextRequest) {
         // Attach each of these inline with Content-ID <dial-KEY>; the HTML
         // already references cid:dial-KEY. Rasterise to PNG at 224x224 if the
         // mailer can, but SVG parts are fine for clients that take them.
+        dialSource,
         dials: dials.map((d) => ({
           cid: `dial-${d.key}`, key: d.key, label: d.label,
           value: d.value, goal: d.goal, pct: d.pct, pending: d.pending,
-          unit: d.unit, color: d.color, track: d.track, bg: DIAL_BG, svg: dialSvg(d),
+          unit: d.unit, color: d.color, track: d.track, bg: DIAL_BG,
+          // Attach this under Content-ID <dial-KEY>; the HTML already points
+          // at cid:dial-KEY. Present unless the render fell back.
+          png: dialArt[d.key],
+          ...(dialSource === "svg" ? { svg: dialSvg(d) } : {}),
         })),
         // Attach each inline with Content-ID <team-SLUG>; the HTML already
         // references cid:team-SLUG. `png` is base64 of a 124px PNG.
