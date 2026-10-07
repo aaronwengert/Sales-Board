@@ -49,6 +49,7 @@ const RETIRE: Record<string, string> = {
   "aj laux": "2026-08-01",
   "jeremy rohrer": "2026-08-01",
   "william boucher": "2026-10-01",
+  "john carnino": "2026-10-07",
 };
 
 // House account: reps who are off the desk but whose loans are still in the
