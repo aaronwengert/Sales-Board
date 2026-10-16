@@ -17,10 +17,10 @@ export const BOARDS: Record<Channel, { title: string; goal: number }> = {
 // Roster of record. The Rainmakers were dissolved 2026-09-16 and their eleven
 // redistributed; Reese Rogers went to HOUSE and Brian Sherrill left the company.
 const TEAMS: Record<string, { channel: Channel; aes: string[] }> = {
-  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Zia Hasso","Michael Blaschuk","Dalton Phillips","William Boucher"] },
-  "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby","Djimon Colbert","Joseph Marino"] },
+  "Cash Flow Commanders": { channel: "wholesale", aes: ["Matthew Cefalo","John Oliveri","Paul Goodwin","Robert Morton","Zia Hasso","Michael Blaschuk","Dalton Phillips","William Boucher","Kyle Archibald","Israel Lee","Michael Baek"] },
+  "Cash Flow Cowboys": { channel: "wholesale", aes: ["John Giordano","Francisco Cueto","Keir Buettner","Kyle Bilby","Kyle Holmes","Paul Gallegos","Reginald Peterson","Tyler Bilby","Djimon Colbert","Joseph Marino","Emilio Lemus"] },
   "CTC Crusaders": { channel: "wholesale", aes: ["Adam Martin","Andrew Nwaoko","Bryce Welker","Caleb Sherrill","Ryan Matyniak","Benjamin Martin","Logan Kincade","Mari Woods","Jackson Miles"] },
-  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan"] },
+  "Lien Kings": { channel: "wholesale", aes: ["Eric Ferguson","Alfredo Sanchez","Christopher Nish","Cody Aadland","Dylan Bray","John Carnino","Myles Taylor","Waleed Smith","Gregory Ward","Jacob Andrew","Kyle Shanahan","Max Essley"] },
   "Bone Crushers": { channel: "wholesale", aes: ["Da'Shann Austin","Johnny Salmons","Owen Wakeman","Sonny Haskins"] },
   "Retail": { channel: "retail", aes: ["Garrett Bowlby","Tom Wright","Kenneth Kohnhorst","Robert Bosolet","Kenneth Bowlby","Eric Bowlby","Carlos Hidalgo"] },
   "Correspondent": { channel: "correspondent", aes: ["Danielle King","Hugh Sinclair","Tracy Collins"] },
@@ -93,12 +93,48 @@ const NO_TIER_AES = new Set(["keir buettner", "jacob andrew",
 // unshaded pipeline, because a team-wide book still reads as one book, but they
 // are not new to the company and must not carry the NEW tag.
 const NOT_NEW = new Set(["gregory ward", "kyle shanahan"]);
+
+/** How long someone counts as new, in days. */
+const NEW_DAYS = 180;
+
+/** When each AE joined the board, as an Arizona YYYY-MM-DD.
+ *
+ *  This is the mechanism now: NEW appears the day a name is added here and
+ *  takes itself off 180 days later, at which point the pipeline tier shading
+ *  switches on by itself. Nobody has to remember to retire the badge, which
+ *  is why the hand-kept list below it had people on it who started in spring.
+ */
+const STARTED: Record<string, string> = {
+  "max essley": "2026-10-01",
+  "emilio lemus": "2026-10-01",
+  "kyle archibald": "2026-10-01",
+  "israel lee": "2026-10-01",
+  "michael baek": "2026-10-01",
+};
+
+/** Days elapsed since an Arizona date, or null when no date is on file. */
+function daysSinceAZ(d: string | undefined): number | null {
+  if (!d) return null;
+  const [y, m, day] = d.split("-").map(Number);
+  if (!y || !m || !day) return null;
+  const az = azNow();
+  const start = Date.UTC(y, m - 1, day);
+  const today = Date.UTC(az.getFullYear(), az.getMonth(), az.getDate());
+  return Math.floor((today - start) / 86400000);
+}
+
 function isNewAE(ae: string): boolean {
   // A row that already prints a role across its TODAY group never also carries
   // NEW. Eric Ferguson is on the new team and a Sales Manager both; the role is
   // the more useful of the two labels and two labels on one row is one too many.
   if (ROLES[norm(ae)]) return false;
   if (NOT_NEW.has(norm(ae))) return false;
+  // A start date, where one is on file, is the whole answer — including a
+  // definite "no" once the 180 days are up.
+  const since = daysSinceAZ(STARTED[norm(ae)]);
+  if (since !== null) return since < NEW_DAYS;
+  // No date yet: fall back to the hand-kept lists. These should empty out as
+  // start dates are filled in, and this branch can then go.
   return NO_TIER_AES.has(norm(ae)) || NO_TIER_TEAMS.has(norm(teamFor(ae)));
 }
 // Two overlapping reasons to drop the tier chip, and only one of them is worth
