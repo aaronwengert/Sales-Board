@@ -297,6 +297,14 @@ export const TV2 = `
   // Marked out of office today: no daily-goal expectation, and the TODAY cells
   // say so plainly instead of showing a row of zeros that reads as a bad day.
   (B.oooAEs||[]).forEach(function(n){OOO[n]=1;EXEMPT[n]=1;});
+  // Sales managers carry a book but are not ranked against one. They were
+  // already excluded from the daily-goal math (GOAL_DASH), so the only thing
+  // their row added was a line of dashes between the people being measured.
+  // ROSTER is the list that gets rows; D stays whole, and every dollar figure
+  // on this screen is read from the board-wide totals (K) or summed over D, so
+  // nothing a manager funded or has in pipeline leaves the board with the row.
+  var ROSTER = D.filter(function(r){ return ROLE[r[0]] !== 'Sales Manager'; });
+  if(!ROSTER.length) ROSTER = D;
   var DWELL=(parseInt(Q.get('sec')||'30',10)||30)*1000;
   var PIN=(Q.get('screen')||'').toLowerCase();
   // A phone is not a small television. Below this width the rotating board
@@ -331,9 +339,9 @@ export const TV2 = `
   }
 
   // Two independent sort orders — each screen is ranked by the thing it shows.
-  var BY_PIPE = D.slice().sort(function(a,b){ return (b[2]-a[2]) || (b[7]-a[7]); });
-  var BY_TOTAL= D.slice().sort(function(a,b){ return (b[7]-a[7]) || (b[4]-a[4]); });
-  var SPLIT = Math.ceil(D.length/2);   // 40 AEs -> 20 left, 20 right
+  var BY_PIPE = ROSTER.slice().sort(function(a,b){ return (b[2]-a[2]) || (b[7]-a[7]); });
+  var BY_TOTAL= ROSTER.slice().sort(function(a,b){ return (b[7]-a[7]) || (b[4]-a[4]); });
+  var SPLIT = Math.ceil(ROSTER.length/2);   // 40 AEs -> 20 left, 20 right
 
   // ---- header facts (mirrors the desktop header) ----
   // Market holidays: no loan funds on these days, so each one is removed from
@@ -608,7 +616,7 @@ export const TV2 = `
       +'<div class="ds">of '+total+' in '+MONTHS[m]+(pastWire?' &middot; wire cut':'')+' &middot; upd '+(B.updatedLabel||'—')+' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div></div></div>'
       + dlBlock
       +'<div class="tv2sec"><div class="s1">'+s.name+'</div>'
-      +'<div class="s2">'+s.sub+' &middot; '+D.length+' AES</div>'
+      +'<div class="s2">'+s.sub+' &middot; '+ROSTER.length+' AES</div>'
       +'<div class="tv2dots">'+dots+'</div></div></div>';
     board.innerHTML = hdr
       + '<div class="tv2band">'+s.band()+'</div>'
@@ -787,7 +795,7 @@ export const TV2 = `
         +'<span class="m2sx">'+note+'</span></div>'
         +'<div class="m2hd '+t.k+'"><i></i><b></b>'+t.head.map(function(h){return '<u>'+h+'</u>';}).join('')+'</div>';
       var list='<div class="m2list '+t.k+'">'+t.data.map(function(r,j){return rowFor(t,r,j+1);}).join('')+'</div>';
-      var foot='<div class="m2foot">'+D.length+' AEs &middot; updated '+(B.updatedLabel||'—')
+      var foot='<div class="m2foot">'+ROSTER.length+' AEs &middot; updated '+(B.updatedLabel||'—')
         +' &middot; calls '+(B.callsUpdatedLabel||'—')+'</div>';
       wrap.innerHTML=hdr+tabs+tileFor(t)+head+list+foot;
     }
