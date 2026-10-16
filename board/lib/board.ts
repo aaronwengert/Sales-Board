@@ -57,7 +57,7 @@ const RETIRE: Record<string, string> = {
 // but every dollar already on their files keeps counting in the team tiles, so
 // removing a rep never silently deletes production from the month. There is no
 // visible "House" row; the money simply stays in the totals up top.
-const HOUSE = new Set(["reese rogers", "jeff laux", "adam paniagua"]);
+const HOUSE = new Set(["reese rogers", "jeff laux", "adam paniagua", "logan kincade"]);
 function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 
 // Daily-goal exemptions (wholesale):
