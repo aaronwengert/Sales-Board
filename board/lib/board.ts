@@ -180,7 +180,10 @@ function norm(s: string) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g,
 // Identity aliases: fold two spellings of the same person onto one canonical
 // key so their production, calls, and tickets combine on a single row.
 // The export spells him both ways; the roster spelling wins.
-const ALIAS: Record<string, string> = { "alfredo sanchez ii": "alfredo sanchez" };
+const ALIAS: Record<string, string> = {
+  "alfredo sanchez ii": "alfredo sanchez",
+  "israel lee ii": "israel lee",
+};
 function nkey(s: string) { const n = norm(s); return ALIAS[n] || n; }
 const NAME2TEAM: Record<string, string> = {};
 const NAME2DISPLAY: Record<string, string> = {};
