@@ -36,25 +36,25 @@ export const TV2_CSS = `
 .tv2hide{display:none!important}
 #tv2host{position:fixed;inset:0;background:var(--bg);overflow:hidden;z-index:50}
 #tv2board{width:1920px;height:1080px;transform-origin:top left;position:absolute;top:0;left:0;
-  display:flex;flex-direction:column;padding:20px 28px 16px;box-sizing:border-box;font-family:inherit}
+  display:flex;flex-direction:column;padding:12px 28px 12px;box-sizing:border-box;font-family:inherit}
 .tv2track{position:absolute;top:0;left:0;right:0;height:4px;background:#dde4ec;z-index:4}
 .tv2prog{position:absolute;top:0;left:0;height:4px;background:#2f6f43;width:0;z-index:5}
 
 /* ---- header ---- */
 .tv2hdr{display:flex;align-items:center;gap:20px;flex:0 0 auto}
-.tv2id{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);
-  border-radius:14px;padding:10px 20px 10px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
-.tv2logo{height:54px;width:auto;display:block}
-.tv2brand .t1{font-size:29px;font-weight:800;letter-spacing:-.4px;color:var(--ink);line-height:1.05}
-.tv2brand .t2{font-size:18px;font-weight:600;color:#2f6f43;margin-top:2px}
+.tv2id{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);
+  border-radius:14px;padding:7px 18px 7px 12px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.tv2logo{height:44px;width:auto;display:block}
+.tv2brand .t1{font-size:25px;font-weight:800;letter-spacing:-.4px;color:var(--ink);line-height:1.05}
+.tv2brand .t2{font-size:16px;font-weight:600;color:#2f6f43;margin-top:2px}
 .tv2days{display:flex;align-items:center;gap:11px;padding-left:20px;border-left:2px solid var(--line)}
-.tv2days .n{font-size:40px;font-weight:800;color:#2f6f43;line-height:1}
+.tv2days .n{font-size:34px;font-weight:800;color:#2f6f43;line-height:1}
 .tv2days .dt{font-size:14.5px;font-weight:600;color:var(--ink)}
 .tv2days .ds{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
 .tv2dl{display:flex;align-items:center;gap:20px;padding-left:22px;border-left:2px solid var(--line)}
 .tv2dl .d{line-height:1.1}
 .tv2dl .k{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
-.tv2dl .v{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-top:2px}
+.tv2dl .v{font-size:21px;font-weight:800;letter-spacing:-.3px;margin-top:2px}
 .tv2dl .s{font-size:11.5px;font-weight:500;color:var(--muted);margin-top:1px}
 .tv2dl .cd .v{color:#2a5bbf}
 .tv2dl .rs .v{color:#c2740e}
@@ -64,30 +64,30 @@ export const TV2_CSS = `
 .tv2dl .rs .v.now{background:#c2740e}
 .tv2dl .cl .v.now{background:#7a4b52}
 .tv2sec{margin-left:auto;text-align:right}
-.tv2sec .s1{font-size:23px;font-weight:800;letter-spacing:.6px;color:var(--ink)}
-.tv2sec .s2{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.5px}
-.tv2dots{display:flex;gap:7px;justify-content:flex-end;margin-top:6px}
-.tv2dots i{width:30px;height:5px;border-radius:3px;background:#d7dee8}
+.tv2sec .s1{font-size:20px;font-weight:800;letter-spacing:.6px;color:var(--ink)}
+.tv2sec .s2{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px;letter-spacing:.5px}
+.tv2dots{display:flex;gap:7px;justify-content:flex-end;margin-top:5px}
+.tv2dots i{width:30px;height:4px;border-radius:3px;background:#d7dee8}
 .tv2dots i.on{background:#2f6f43}
 .tv2sleep{font-size:11.5px;font-weight:600;color:#96a0af;letter-spacing:.3px;white-space:nowrap}
 
 /* ---- KPI band: exactly two tiles, one per section below ---- */
-.tv2band{display:flex;gap:20px;margin-top:12px;flex:0 0 auto}
-.tv2band .card{flex:1;height:156px;border-radius:14px;padding:13px 22px 12px;box-sizing:border-box;position:relative;overflow:hidden}
+.tv2band{display:flex;gap:20px;margin-top:9px;flex:0 0 auto}
+.tv2band .card{flex:1;height:127px;border-radius:14px;padding:9px 22px 8px;box-sizing:border-box;position:relative;overflow:hidden}
 .tv2band .krow{display:flex;align-items:center;justify-content:space-between}
 .tv2band .k-amber .pill{background:#fdf0d8;color:#8a6d0a;box-shadow:inset 0 0 0 1px #f0dcae}
 .tv2band .k-green .pill.ahead,.tv2band .k-green .pill.behind{}
-.tv2band .kl{font-size:14.5px;font-weight:700;letter-spacing:1px;color:var(--muted)}
-.tv2band .kb{font-size:41px;font-weight:800;letter-spacing:-1px;line-height:1.05;margin-top:2px;white-space:nowrap}
+.tv2band .kl{font-size:13.5px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+.tv2band .kb{font-size:33px;font-weight:800;letter-spacing:-1px;line-height:1.02;margin-top:1px;white-space:nowrap}
 .tv2band .kn{font-size:15px;font-weight:700;color:var(--muted);margin-top:6px}
-.tv2band .sub{font-size:19px;font-weight:600;color:#8b95a6;letter-spacing:0}
+.tv2band .sub{font-size:16px;font-weight:600;color:#8b95a6;letter-spacing:0}
 /* every tile has the same anatomy: label row, big number, bar, three stats */
-.tv2split{display:flex;margin-top:11px}
+.tv2split{display:flex;margin-top:7px}
 .tv2split .h{flex:1 1 0}
 .tv2split .h.r{text-align:right}
-.tv2split .h .k{font-size:11.5px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
-.tv2split .h .v{font-size:22px;font-weight:700;line-height:1.2;margin-top:2px}
-.tv2bar{height:6px;border-radius:4px;background:#e6ebf2;margin-top:10px;position:relative;overflow:hidden}
+.tv2split .h .k{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+.tv2split .h .v{font-size:19px;font-weight:700;line-height:1.15;margin-top:1px}
+.tv2bar{height:6px;border-radius:4px;background:#e6ebf2;margin-top:7px;position:relative;overflow:hidden}
 .tv2bar i{display:block;height:100%;border-radius:4px}
 .tv2bar .mk{position:absolute;top:-2px;width:3px;height:11px;background:#334;border-radius:2px}
 
@@ -96,7 +96,7 @@ export const TV2_CSS = `
    carried by a colored underline under the group name rather than a filled bar.
    The pipeline tier keeps its filled chip — it is the one place on the screen
    where color is doing real work. */
-.tv2grid{flex:1 1 auto;margin-top:14px;min-height:0;display:flex;gap:24px}
+.tv2grid{flex:1 1 auto;margin-top:10px;min-height:0;display:flex;gap:24px}
 .tv2col{flex:1 1 0;min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 15px 8px}
 table.tv2t{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
 table.tv2t th{font-size:10.5px;font-weight:600;letter-spacing:.4px;color:var(--muted);text-align:right;padding:9px 6px 6px}
@@ -170,7 +170,7 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .tv2g5{width:48px;height:7px;border-radius:5px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
 .tv2g5 i{display:block;height:100%}
 .tv2g5p{font-size:11.5px;font-weight:500;color:var(--muted);width:28px;text-align:right}
-.tv2lgd{display:flex;gap:20px;justify-content:flex-end;margin-top:7px;flex:0 0 auto;
+.tv2lgd{display:flex;gap:20px;justify-content:flex-end;margin-top:5px;flex:0 0 auto;
   font-size:11.5px;font-weight:500;color:var(--muted)}
 .tv2lgd i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:middle}
 
