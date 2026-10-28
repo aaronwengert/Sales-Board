@@ -37,7 +37,7 @@ const PATHNAME = "board/ooo.json";
  * The SDK reads VERCEL_OIDC_TOKEN by itself, so for the OIDC path all we have to
  * do is pass the store id and stay out of the way.
  */
-type BlobAuth = { token: string } | { storeId: string };
+export type BlobAuth = { token: string } | { storeId: string };
 
 function staticToken(): string {
   const direct = process.env.BLOB_READ_WRITE_TOKEN;
@@ -48,7 +48,7 @@ function staticToken(): string {
   return "";
 }
 
-function blobAuth(): BlobAuth | null {
+export function blobAuth(): BlobAuth | null {
   const token = staticToken();
   if (token) return { token };
   const storeId = process.env.BLOB_STORE_ID;

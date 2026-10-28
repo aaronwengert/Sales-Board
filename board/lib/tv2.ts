@@ -121,11 +121,15 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d
 .tv2v.b60{color:#b03a2e}
 .tv2hit{color:#127a3c;font-weight:700}
 .tv2dash{color:#ccd4de}
-/* NEW tag. Deliberately quiet: it exists to explain why a number carries no
-   tier colour, so it must not compete with the number it is explaining. */
-.tv2new{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
-  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px;
-  color:#fff;background:#5f7794}
+/* Name badges. NEW is deliberately quiet: it exists to explain why a number
+   carries no tier colour, so it must not compete with the number it is
+   explaining. SR borrows the same geometry so the two read as one system, and
+   takes the board's green because it is a standing fact about the person
+   rather than something to act on. */
+.tv2new,.tv2sr{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
+  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px;color:#fff}
+.tv2new{background:#5f7794}
+.tv2sr{background:#2f6f43}
 /* Out of office. The label lives in the first TODAY cell and is allowed to
    overflow across the four empty ones beside it. A colspan would be the obvious
    way to do this, but under table-layout:fixed the browser gives a spanning cell
@@ -230,8 +234,10 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .m2r b{flex:1 1 auto;min-width:0;font-size:13px;font-weight:400;white-space:nowrap;overflow:hidden;
   padding-right:5px;display:flex;align-items:center}
 .m2nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.m2new{flex:0 0 auto;margin-left:5px;padding:1px 5px;border-radius:4px;font-size:8.5px;
-  font-weight:700;letter-spacing:.6px;color:#fff;background:#5f7794}
+.m2new,.m2sr{flex:0 0 auto;margin-left:5px;padding:1px 5px;border-radius:4px;font-size:8.5px;
+  font-weight:700;letter-spacing:.6px;color:#fff}
+.m2new{background:#5f7794}
+.m2sr{background:#2f6f43}
 .m2r u{text-decoration:none;flex:0 0 38px;text-align:right;font-size:13.5px;font-weight:400}
 .m2r u.g{color:var(--green-ink);font-weight:700}
 .m2r u.w30{flex:0 0 34px;padding-right:10px}
@@ -292,6 +298,11 @@ export const TV2 = `
   (B.noTierAEs||[]).forEach(function(n){NOTIER[n]=1;});
   var NEWAE={}; (B.newAEs||[]).forEach(function(n){NEWAE[n]=1;});
   function newTag(n){ return NEWAE[n] ? '<span class="tv2new">NEW</span>' : ''; }
+  // Senior AEs, set on /roster. SR is drawn first because it is the permanent
+  // fact and NEW the temporary one, so a rep who is both reads "senior, and
+  // new here" rather than the other way round.
+  var SRAE={}; (B.seniorAEs||[]).forEach(function(n){SRAE[n]=1;});
+  function srTag(n){ return SRAE[n] ? '<span class="tv2sr">SR</span>' : ''; }
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Marked out of office today: no daily-goal expectation, and the TODAY cells
@@ -522,8 +533,8 @@ export const TV2 = `
   // S1 — TODAY + ACTIVITY & PIPELINE, ranked by pipeline size.
   function colS1(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:44px"><col style="width:220px"><col style="width:14px">'
-      +'<col style="width:54px"><col style="width:52px"><col style="width:36px"><col style="width:40px"><col style="width:46px"><col style="width:14px">'
+      +'<col style="width:38px"><col style="width:232px"><col style="width:11px">'
+      +'<col style="width:54px"><col style="width:52px"><col style="width:36px"><col style="width:40px"><col style="width:46px"><col style="width:11px">'
       +'<col style="width:42px"><col style="width:136px"><col style="width:96px"><col style="width:94px"></colgroup>';
     h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh0" colspan="5"><span>TODAY</span></th><th class="sp"></th><th class="gh gh1" colspan="4"><span>ACTIVITY &amp; PIPELINE</span></th></tr>';
     h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>CALLS</th><th>TALK</th><th>TIX</th><th>SUB</th><th>GOAL</th><th class="sp"></th>'
@@ -554,7 +565,7 @@ export const TV2 = `
           +'<td><span class="tv2v'+(sHit?' tv2hit':'')+'">'+(isDash?dash:td[2])+'</span></td>'
           +'<td>'+(isDash?dash:'<span class="tv2chk'+(all4?' gold':'')+(met?'':' empty')+'">'+(all4?'&#9733;':'&#10003;')+'</span>')+'</td>';
       h+='<tr class="tv2row'+(all4?' sweep':'')+(isOoo?' out':'')+'">'
-        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+newTag(n)+'</td><td class="sp"></td>'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+srTag(n)+newTag(n)+'</td><td class="sp"></td>'
         + todayCells + '<td class="sp"></td>'
         +'<td><span class="tv2v">'+(MTD[n]||0)+'</span></td>'
         +'<td>'+(tierOff?'<span class="tv2v">'+mM(pipe)+'</span>':'<span class="tv2pk '+pk+'">'+mM(pipe)+'</span>')+'</td>'
@@ -567,8 +578,8 @@ export const TV2 = `
   // S2 — FUNDED PRODUCTION + ON DECK, ranked by funded + CTC+ total.
   function colS2(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:44px"><col style="width:222px"><col style="width:14px">'
-      +'<col style="width:54px"><col style="width:200px"><col style="width:96px"><col style="width:14px">'
+      +'<col style="width:38px"><col style="width:234px"><col style="width:11px">'
+      +'<col style="width:54px"><col style="width:200px"><col style="width:96px"><col style="width:11px">'
       +'<col style="width:54px"><col style="width:100px"><col style="width:88px"></colgroup>';
     h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh2" colspan="3"><span>FUNDED PRODUCTION</span></th><th class="sp"></th><th class="gh gh3" colspan="3"><span>ON DECK</span></th></tr>';
     h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>UNITS</th><th>FUNDED / $3M</th><th>AVG</th><th class="sp"></th>'
@@ -580,7 +591,7 @@ export const TV2 = `
       var fcell = f>=3e6 ? '<span class="tv2circle">'+mM(f)+'</span>'
         : '<span class="tv2frow"><span class="tv2v">'+mM(f)+'</span><span class="tv2g5"><i style="width:'+fp+'%;background:'+mixAG(fp)+'"></i></span><span class="tv2g5p">'+fp+'%</span></span>';
       h+='<tr class="tv2row">'
-        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+newTag(n)+'</td><td class="sp"></td>'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+srTag(n)+newTag(n)+'</td><td class="sp"></td>'
         +'<td><span class="tv2v">'+u+'</span></td>'
         +'<td>'+fcell+'</td>'
         +'<td><span class="tv2v">'+mK(avg)+'</span></td><td class="sp"></td>'
@@ -774,7 +785,7 @@ export const TV2 = `
       // truncating the name, so the team total moves up to the section line and
       // the per-AE detail stays on the TV and the desktop board.
       return '<div class="m2r'+(OOO[n]?' out':'')+'"><i>'+rank+'</i>'
-        +'<b><span class="m2nm">'+n+'</span>'+(NEWAE[n]?'<span class="m2new">NEW</span>':'')+'</b>'+cells+'</div>';
+        +'<b><span class="m2nm">'+n+'</span>'+(SRAE[n]?'<span class="m2sr">SR</span>':'')+(NEWAE[n]?'<span class="m2new">NEW</span>':'')+'</b>'+cells+'</div>';
     }
 
     function paint(){

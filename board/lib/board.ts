@@ -265,6 +265,9 @@ export type BoardData = {
   noTierAEs: string[];
   /** Rows new enough that their numbers carry a NEW tag. */
   newAEs: string[];
+  /** Rows whose AE is a Senior Account Executive, from the /roster screen.
+   *  Purely a label: it changes no goal, no shading, and no total. */
+  seniorAEs: string[];
   exemptAEs: string[];
   /** Per AE: [entered doc check today, entered underwriting today]. */
   stage: Record<string, [number, number]>;
@@ -308,10 +311,16 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
    *  what the board showed that evening, which is what week-to-date is built
    *  from. Left unset, this is the live board and nothing changes. */
   asOf?: Date;
+  /** AEs who carry the Sr. badge, from the /roster screen's store. Spelling is
+   *  matched loosely (case and punctuation are ignored) and a name that is not
+   *  on the roster is dropped, so a stale entry can never invent a row. */
+  seniorNames?: string[];
 } = {}): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = opts.asOf || azNow();
+  // Senior AEs, normalised once so the per-row check below is a plain lookup.
+  const SENIOR = new Set((opts.seniorNames || []).map(norm).filter(Boolean));
   const todayM = az.getMonth() + 1, todayD = az.getDate(), todayY = az.getFullYear();
 
   // Reporting month = the CURRENT calendar month in Arizona, always.
@@ -517,6 +526,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [NAME2DISPLAY[k] || k, v])),
     noTierAEs: rows.map((r) => r[0]).filter(noTier),
     newAEs: rows.map((r) => r[0]).filter(isNewAE),
+    seniorAEs: rows.map((r) => r[0]).filter((n) => SENIOR.has(norm(n))),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
     stage,
     teamManagers: TEAM_MANAGERS,

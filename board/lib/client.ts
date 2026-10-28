@@ -19,6 +19,7 @@ export const CLIENT = `
   var DASH={}, EXEMPT={}, OOO={}, PERM={}, ROLE=B.roles||{}, NOTIER={};
   (B.noTierAEs||[]).forEach(function(n){NOTIER[n]=1;});
   var NEWAE={}; (B.newAEs||[]).forEach(function(n){NEWAE[n]=1;});
+  var SRAE={}; (B.seniorAEs||[]).forEach(function(n){SRAE[n]=1;});
   (B.dashAEs||[]).forEach(function(n){DASH[n]=1;PERM[n]=1;});
   (B.exemptAEs||[]).forEach(function(n){EXEMPT[n]=1;});
   // Out of office today: no daily-goal expectation, and the TODAY group says so
@@ -124,6 +125,7 @@ export const CLIENT = `
         +'<td>'+goalTxt+'</td>';
     h+='<tr'+(i%2?' class="altrow"':'')+'>'
      +'<td class="l"><span class="aename'+(OOO[n]?' out':'')+'">'+n+'</span>'
+     +(SRAE[n]?'<span class="srtag">SR</span>':'')
      +(NEWAE[n]?'<span class="newtag">NEW</span>':'')
      +'<span class="aeteam">'+tm+'</span></td>'+sp
      + todayTxt + sp
