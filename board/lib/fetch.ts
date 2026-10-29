@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import Papa from "papaparse";
 import { readEntries, namesOn, azToday as oooToday, storeConfigured } from "./ooo";
-import { readSeniorNames } from "./senior";
+import { readTitleMap } from "./titles";
 import { computeBoard, BOARDS, type BoardData, type Channel } from "./board";
 
 const POWERBI = process.env.POWERBI_FOLDER_ID || "1kNFwyV5Jn-JNtlKdXph2KoWFwwX_A5yk";
@@ -236,7 +236,7 @@ async function fetchOOO(): Promise<string[]> {
 function emptyBoard(channel: Channel): BoardData {
   const cfg = BOARDS[channel];
   return {
-    rows: [], today: {}, mtd: {}, tix: {}, tixTotal: 0, dashAEs: [], roles: {}, noTierAEs: [], newAEs: [], seniorAEs: [], exemptAEs: [], stage: {}, teamManagers: {}, oooAEs: [], callsPending: true, tixPending: true,
+    rows: [], today: {}, mtd: {}, tix: {}, tixTotal: 0, dashAEs: [], roles: {}, noTierAEs: [], newAEs: [], titleAEs: {}, exemptAEs: [], stage: {}, teamManagers: {}, oooAEs: [], callsPending: true, tixPending: true,
     kpi: { pipeline: 0, pipeLocked: 0, pipeUnlocked: 0, lockedPct: 0, pipeSoft: 0, pipeStale: 0, pipeStaleN: 0, funded: 0, fundedUnits: 0, goalElig: 0, ctc: 0, ctcUnits: 0, fundedCtc: 0, docCheckToday: 0, uwToday: 0, subsToday: 0 },
     updatedLabel: "—",
     callsUpdatedLabel: "—",
@@ -248,8 +248,8 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
   const EMPTY = emptyBoard(channel);
   if (!hasCreds()) return { ...EMPTY, error: "no-credentials" };
   try {
-    const [prodFiles, callFiles, ticketFiles, ooo, seniorNames] = await Promise.all([
-      listCsvs(POWERBI), listCsvs(CALLS), listCsvs(TICKETS), fetchOOO(), readSeniorNames(),
+    const [prodFiles, callFiles, ticketFiles, ooo, titles] = await Promise.all([
+      listCsvs(POWERBI), listCsvs(CALLS), listCsvs(TICKETS), fetchOOO(), readTitleMap(),
     ]);
     // Newest production CSV that actually contains the Sales Board header.
     let prodCsv = "", prodFile: DFile | null = null;
@@ -282,7 +282,7 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
       }
     }
 
-    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel, ticketsCsv, tixIsToday, ooo, { seniorNames });
+    return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel, ticketsCsv, tixIsToday, ooo, { titles });
   } catch (e: any) {
     return { ...EMPTY, error: e?.message || String(e) };
   }

@@ -1,4 +1,4 @@
-import { readSenior, storeConfigured } from "@/lib/senior";
+import { readTitles, storeConfigured } from "@/lib/titles";
 import { authMode } from "@/lib/ooo";
 import { rosterByTeam, TEAM_MANAGERS } from "@/lib/board";
 import { RosterEditor } from "./RosterEditor";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  *  the next time anyone pressed Save.
  *
  *  Sales managers are left out. They carry a book but no longer take a row on
- *  the board, so marking one senior would save a name that never renders — a
+ *  the board, so giving one a rank would save a name that never renders — a
  *  setting that appears to do nothing is worse than one that isn't offered.
  */
 function rosterGroups() {
@@ -26,12 +26,12 @@ function rosterGroups() {
 
 // Sits behind the same PIN gate as the board (middleware.ts).
 export default async function Page() {
-  const doc = await readSenior();
+  const doc = await readTitles();
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: ROSTER_CSS }} />
       <RosterEditor
-        initial={doc.names}
+        initial={doc.titles}
         groups={rosterGroups()}
         configured={storeConfigured()}
         tokenVar={authMode()}

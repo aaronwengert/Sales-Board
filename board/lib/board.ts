@@ -265,9 +265,10 @@ export type BoardData = {
   noTierAEs: string[];
   /** Rows new enough that their numbers carry a NEW tag. */
   newAEs: string[];
-  /** Rows whose AE is a Senior Account Executive, from the /roster screen.
-   *  Purely a label: it changes no goal, no shading, and no total. */
-  seniorAEs: string[];
+  /** Rows whose AE holds a rank above plain AE, from the /roster screen:
+   *  display name -> "SR" | "AVP". Purely a label: it changes no goal, no
+   *  shading, and no total. */
+  titleAEs: Record<string, string>;
   exemptAEs: string[];
   /** Per AE: [entered doc check today, entered underwriting today]. */
   stage: Record<string, [number, number]>;
@@ -311,16 +312,21 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
    *  what the board showed that evening, which is what week-to-date is built
    *  from. Left unset, this is the live board and nothing changes. */
   asOf?: Date;
-  /** AEs who carry the Sr. badge, from the /roster screen's store. Spelling is
-   *  matched loosely (case and punctuation are ignored) and a name that is not
-   *  on the roster is dropped, so a stale entry can never invent a row. */
-  seniorNames?: string[];
+  /** AE titles from the /roster screen's store: display name -> "SR" | "AVP".
+   *  Spelling is matched loosely (case and punctuation are ignored) and a name
+   *  that is not on the roster is dropped, so a stale entry can never invent a
+   *  row. Each AE holds at most one rank. */
+  titles?: Record<string, string>;
 } = {}): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = opts.asOf || azNow();
-  // Senior AEs, normalised once so the per-row check below is a plain lookup.
-  const SENIOR = new Set((opts.seniorNames || []).map(norm).filter(Boolean));
+  // Titles, normalised once so the per-row lookup below is a plain map read.
+  const TITLE_BY_KEY = new Map<string, string>();
+  for (const [n, t] of Object.entries(opts.titles || {})) {
+    const k = norm(n);
+    if (k && (t === "SR" || t === "AVP")) TITLE_BY_KEY.set(k, t);
+  }
   const todayM = az.getMonth() + 1, todayD = az.getDate(), todayY = az.getFullYear();
 
   // Reporting month = the CURRENT calendar month in Arizona, always.
@@ -526,7 +532,11 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [NAME2DISPLAY[k] || k, v])),
     noTierAEs: rows.map((r) => r[0]).filter(noTier),
     newAEs: rows.map((r) => r[0]).filter(isNewAE),
-    seniorAEs: rows.map((r) => r[0]).filter((n) => SENIOR.has(norm(n))),
+    titleAEs: Object.fromEntries(
+      rows.map((r) => r[0])
+        .map((n) => [n, TITLE_BY_KEY.get(norm(n))])
+        .filter((e): e is [string, string] => Boolean(e[1])),
+    ),
     exemptAEs: [...GOAL_EXEMPT].map((k) => NAME2DISPLAY[k] || k),
     stage,
     teamManagers: TEAM_MANAGERS,

@@ -21,12 +21,13 @@ export const CSS = `
   .aename.out{color:#98a2b1}
   /* NEW tag — see newAEs in board.ts. Quiet by design: it explains an unshaded
      pipeline number rather than drawing attention away from it. */
-  .newtag,.srtag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
+  .newtag,.ranktag{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
     font-size:9.5px;font-weight:700;letter-spacing:.7px;vertical-align:2px;color:#fff}
   .newtag{background:#5f7794}
-  /* Senior AE — set on /roster. A standing fact about the person, so it takes
-     the board's green rather than NEW's grey. */
-  .srtag{background:#2f6f43}
+  /* Rank — set on /roster, at most one per person. A standing fact about the
+     person, so these take colour rather than NEW's grey. */
+  .ranktag.sr{background:#2f6f43}
+  .ranktag.avp{background:#4b2fa8}
   /* Permanently not held to the daily goals. One continuous hairline drawn
      through the TODAY group — the ledger convention for a line that does not
      apply. Deliberately unlike the OUT OF OFFICE pill above, and unlike a row
