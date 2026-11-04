@@ -99,24 +99,24 @@ export const TV2_CSS = `
 .tv2grid{flex:1 1 auto;margin-top:10px;min-height:0;display:flex;gap:24px}
 .tv2col{flex:1 1 0;min-width:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 15px 8px}
 table.tv2t{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
-table.tv2t th{font-size:11.5px;font-weight:600;letter-spacing:.4px;color:var(--muted);text-align:right;padding:9px 6px 6px}
+table.tv2t th{font-size:10.5px;font-weight:600;letter-spacing:.4px;color:var(--muted);text-align:right;padding:9px 6px 6px}
 table.tv2t th.l{text-align:left;padding-left:4px}
-table.tv2t th.gh{font-size:13px;font-weight:600;letter-spacing:1.2px;text-align:left;padding:2px 6px 7px;color:#5c6a7a}
+table.tv2t th.gh{font-size:12px;font-weight:600;letter-spacing:1.2px;text-align:left;padding:2px 6px 7px;color:#5c6a7a}
 table.tv2t th.gh span{display:block;padding-bottom:6px;border-bottom:3px solid currentColor}
 table.tv2t th.gh0 span{color:#7a63c4}
 table.tv2t th.gh1 span{color:#3f6cc9}
 table.tv2t th.gh2 span{color:#2f9558}
 table.tv2t th.gh3 span{color:#d9942c}
 table.tv2t td{text-align:right;padding:0 6px;font-variant-numeric:tabular-nums;
-  font-size:var(--tv2fs,17.5px);font-weight:400;border-bottom:1px solid #f1f4f8}
+  font-size:17.5px;font-weight:400;border-bottom:1px solid #f1f4f8}
 table.tv2t tr:last-child td{border-bottom:none}
 table.tv2t td.l{text-align:left;padding-left:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 table.tv2t td.sp,table.tv2t th.sp{padding:0;border-bottom:none}
 .tv2row{height:var(--tv2rh,34px)}
 table.tv2t th.rk{text-align:right;padding-right:13px}
-table.tv2t td.rk{text-align:right;padding-right:13px;font-size:calc(var(--tv2fs,17.5px)*.74);color:#bcc5d1}
-.tv2name{font-size:var(--tv2fs,17.5px);font-weight:400;color:var(--ink)}
-.tv2v{font-size:var(--tv2fs,17.5px);font-weight:400;color:var(--ink)}
+table.tv2t td.rk{text-align:right;padding-right:13px;font-size:13px;color:#bcc5d1}
+.tv2name{font-size:17.5px;font-weight:400;color:var(--ink)}
+.tv2v{font-size:17.5px;font-weight:400;color:var(--ink)}
 .tv2v.z{color:#ccd4de}
 .tv2v.b60{color:#b03a2e}
 .tv2hit{color:#127a3c;font-weight:700}
@@ -129,7 +129,7 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:calc(var(--tv2fs,
    shade apart are indistinguishable at ten pixels. A rep holds at most one
    rank, so these never appear together. */
 .tv2new,.tv2rank{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:5px;
-  font-size:calc(var(--tv2fs,17.5px)*.571);font-weight:700;letter-spacing:.7px;vertical-align:2px;color:#fff}
+  font-size:10px;font-weight:700;letter-spacing:.7px;vertical-align:2px;color:#fff}
 .tv2new{background:#5f7794}
 .tv2rank.sr{background:#2f6f43}
 .tv2rank.avp{background:#4b2fa8}
@@ -140,7 +140,7 @@ table.tv2t td.rk{text-align:right;padding-right:13px;font-size:calc(var(--tv2fs,
 table.tv2t td.tv2ooo{position:relative;overflow:visible}
 table.tv2t td.tv2ooo span{position:absolute;top:50%;transform:translate(-50%,-50%);
   padding:3px 15px;border-radius:8px;background:#eef1f6;color:#7d8798;
-  font-size:calc(var(--tv2fs,17.5px)*.714);font-weight:600;letter-spacing:.9px;white-space:nowrap}
+  font-size:12.5px;font-weight:600;letter-spacing:.9px;white-space:nowrap}
 .tv2row.out .tv2name{color:#98a2b1}
 /* Permanently not held to the daily goals — a single hairline drawn through the
    TODAY group, the ledger convention for a line that does not apply. It has to
@@ -152,7 +152,7 @@ table.tv2t td.tv2na{background:linear-gradient(#d8dfe9,#d8dfe9) center/100% 1.5p
    with the numbers on either side. Same overflow trick as OUT OF OFFICE. */
 table.tv2t td.tv2role{position:relative;overflow:visible}
 table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-50%);
-  color:#9aa4b2;font-size:calc(var(--tv2fs,17.5px)*.657);font-weight:600;letter-spacing:1.1px;
+  color:#9aa4b2;font-size:11.5px;font-weight:600;letter-spacing:1.1px;
   text-transform:uppercase;white-space:nowrap}
 .tv2chk{display:inline-flex;align-items:center;justify-content:center;
   width:29px;height:29px;border-radius:50%;font-size:18px;font-weight:700;line-height:1;
@@ -167,12 +167,12 @@ table.tv2t td.tv2role span{position:absolute;top:50%;transform:translate(-50%,-5
 .tv2row.sweep .tv2name{font-weight:700;color:#6d5205}
 .tv2row.sweep .tv2v{color:#4a3a10}
 .tv2chk.empty{display:none}
-.tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:500;font-size:var(--tv2fs,17.5px)}
+.tv2pk{padding:2px 10px;border-radius:8px;display:inline-block;font-weight:500;font-size:17.5px}
 .tv2pk.t1{background:#127a3c;color:#fff}
 .tv2pk.t2{background:#dcf3e4;color:#116b36}
 .tv2pk.t3{background:#fbf2c9;color:#836607}
 .tv2pk.t4{background:#fbdedb;color:#9c352f}
-.tv2circle{display:inline-block;padding:2px 12px;border-radius:18px;background:#127a3c;color:#fff;font-weight:500;font-size:var(--tv2fs,17.5px)}
+.tv2circle{display:inline-block;padding:2px 12px;border-radius:18px;background:#127a3c;color:#fff;font-weight:500;font-size:17.5px}
 .tv2frow{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
 .tv2g5{width:48px;height:7px;border-radius:5px;background:#e6ebf2;overflow:hidden;flex:0 0 auto}
 .tv2g5 i{display:block;height:100%}
@@ -540,9 +540,9 @@ export const TV2 = `
   // S1 — TODAY + ACTIVITY & PIPELINE, ranked by pipeline size.
   function colS1(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:50px"><col style="width:300px"><col style="width:9px">'
-      +'<col style="width:50px"><col style="width:44px"><col style="width:34px"><col style="width:38px"><col style="width:46px"><col style="width:9px">'
-      +'<col style="width:41px"><col style="width:120px"><col style="width:100px"><col style="width:47px"></colgroup>';
+      +'<col style="width:36px"><col style="width:238px"><col style="width:9px">'
+      +'<col style="width:54px"><col style="width:52px"><col style="width:36px"><col style="width:40px"><col style="width:46px"><col style="width:9px">'
+      +'<col style="width:42px"><col style="width:136px"><col style="width:96px"><col style="width:94px"></colgroup>';
     h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh0" colspan="5"><span>TODAY</span></th><th class="sp"></th><th class="gh gh1" colspan="4"><span>ACTIVITY &amp; PIPELINE</span></th></tr>';
     h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>CALLS</th><th>TALK</th><th>TIX</th><th>SUB</th><th>GOAL</th><th class="sp"></th>'
       +'<th>MTD</th><th>PIPELINE</th><th>UNLOCKED</th><th>60D+</th></tr>';
@@ -585,9 +585,9 @@ export const TV2 = `
   // S2 — FUNDED PRODUCTION + ON DECK, ranked by funded + CTC+ total.
   function colS2(rows, startRank){
     var h='<table class="tv2t"><colgroup>'
-      +'<col style="width:50px"><col style="width:320px"><col style="width:9px">'
-      +'<col style="width:52px"><col style="width:180px"><col style="width:60px"><col style="width:9px">'
-      +'<col style="width:52px"><col style="width:70px"><col style="width:84px"></colgroup>';
+      +'<col style="width:36px"><col style="width:240px"><col style="width:9px">'
+      +'<col style="width:54px"><col style="width:200px"><col style="width:96px"><col style="width:9px">'
+      +'<col style="width:54px"><col style="width:100px"><col style="width:88px"></colgroup>';
     h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh2" colspan="3"><span>FUNDED PRODUCTION</span></th><th class="sp"></th><th class="gh gh3" colspan="3"><span>ON DECK</span></th></tr>';
     h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>UNITS</th><th>FUNDED / $3M</th><th>AVG</th><th class="sp"></th>'
       +'<th>UNITS</th><th>CTC+</th><th>TOTAL</th></tr>';
@@ -661,21 +661,7 @@ export const TV2 = `
     var nRows=Math.max(L.length,R.length);
     if(nRows>0){
       var rh=Math.floor((grid.clientHeight-hdrH-chrome-2)/nRows);
-      var rhc=Math.max(20,Math.min(52,rh));
-      board.style.setProperty('--tv2rh', rhc+'px');
-      // Row text grows with the row. A shorter roster makes every row taller,
-      // and leaving the type at its full-roster size turns that into empty
-      // space rather than something easier to read from across the floor.
-      // Anchored at 31px rows — the 44-person board — so that case is
-      // unchanged, and capped so a very short roster cannot run the names
-      // into the numbers beside them. Deliberately derived from rh AFTER rh
-      // is final: letting the header fonts scale too would feed back into the
-      // height this is computed from.
-      // The ceiling is not a taste call: it is the largest type the name
-      // column can hold for the longest name carrying both a rank and a NEW
-      // badge. Raising it without widening that column truncates people.
-      board.style.setProperty('--tv2fs',
-        Math.max(17.5, Math.min(21, 17.5+(rhc-31)*0.22)).toFixed(1)+'px');
+      board.style.setProperty('--tv2rh', Math.max(20,Math.min(52,rh))+'px');
     }
     if(SCREENS.length>1 && !paused && awake()){
       prog.style.transition='none'; prog.style.width='0';
