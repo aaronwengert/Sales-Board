@@ -1,5 +1,5 @@
-import { readTitles, storeConfigured } from "@/lib/titles";
-import { authMode } from "@/lib/ooo";
+import { readRoster, storeConfigured } from "@/lib/titles";
+import { authMode, azToday } from "@/lib/ooo";
 import { rosterByTeam, TEAM_MANAGERS } from "@/lib/board";
 import { RosterEditor } from "./RosterEditor";
 import { ROSTER_CSS } from "@/lib/rostercss";
@@ -26,12 +26,14 @@ function rosterGroups() {
 
 // Sits behind the same PIN gate as the board (middleware.ts).
 export default async function Page() {
-  const doc = await readTitles();
+  const doc = await readRoster();
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: ROSTER_CSS }} />
       <RosterEditor
         initial={doc.titles}
+        initialDeparted={doc.departed}
+        today={azToday()}
         groups={rosterGroups()}
         configured={storeConfigured()}
         tokenVar={authMode()}

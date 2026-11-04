@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { readTitles, writeTitles, storeConfigured, type Title } from "@/lib/titles";
+import { readRoster, writeRoster, storeConfigured, type Title } from "@/lib/titles";
 import { rosterByTeam } from "@/lib/board";
+import { azToday } from "@/lib/ooo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ function asTitle(v: any): Title | null {
 }
 
 export async function GET() {
-  const doc = await readTitles();
+  const doc = await readRoster();
   return NextResponse.json({ ok: true, configured: storeConfigured(), ...doc });
 }
 
@@ -44,6 +45,9 @@ export async function POST(req: Request) {
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 }); }
   if (!body?.titles || typeof body.titles !== "object" || Array.isArray(body.titles)) {
+    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+  }
+  if (body.departed && (typeof body.departed !== "object" || Array.isArray(body.departed))) {
     return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
   }
   const given = Object.entries(body.titles as Record<string, unknown>);
@@ -65,12 +69,23 @@ export async function POST(req: Request) {
     titles[name] = title;
   }
 
+  // Departures go through the same roster gate as ranks: a name the board
+  // does not draw cannot be marked as having left it.
+  const departed: Record<string, string> = {};
+  for (const [rawName, rawDate] of Object.entries((body.departed || {}) as Record<string, unknown>)) {
+    const name = allowed.get(key(String(rawName || "")));
+    if (!name || departed[name] !== undefined) continue;
+    const d = String(rawDate || "");
+    departed[name] = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : azToday();
+  }
+
   const doc = {
     titles,
+    departed,
     by: String(body?.by || "").slice(0, 60) || undefined,
     at: new Date().toISOString(),
   };
-  if (!(await writeTitles(doc))) {
+  if (!(await writeRoster(doc))) {
     return NextResponse.json({ ok: false, error: "Could not save" }, { status: 502 });
   }
   return NextResponse.json({ ok: true, ...doc });

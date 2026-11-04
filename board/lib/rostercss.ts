@@ -8,10 +8,13 @@ export const ROSTER_CSS = OOO_CSS + `
 .rs-row{display:flex;align-items:center;gap:10px;padding:10px 2px;
   border-bottom:1px solid #f1f4f8}
 .rs-row:last-child{border-bottom:none}
-.rs-nm{flex:1 1 auto;font-size:17px;font-weight:500;min-width:0;
+.rs-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rs-nm{font-size:17px;font-weight:500;min-width:0;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .rs-row.on .rs-nm{font-weight:700}
-.rs-was{flex:0 0 auto;font-size:11px;font-weight:700;letter-spacing:.3px;color:#b06a00;white-space:nowrap}
+/* Second line, and only on a row that has actually changed — so an unchanged
+   row stays one line tall and the list does not double in length. */
+.rs-was{font-size:11px;font-weight:700;letter-spacing:.3px;color:#b06a00;white-space:nowrap}
 /* The rank picker. Two pills rather than a dropdown: on a phone a dropdown is
    two taps and hides the current value behind the first one, and there are
    only ever two ranks to choose between. Tapping the rank someone already
@@ -23,6 +26,11 @@ export const ROSTER_CSS = OOO_CSS + `
 .rs-pill:disabled{cursor:default;opacity:.55}
 .rs-pill.sr.on{background:var(--sr);border-color:var(--sr);color:#fff}
 .rs-pill.avp.on{background:var(--avp);border-color:var(--avp);color:#fff}
+/* Off the board. Amber rather than red: this is a state, not an error, and it
+   is reversible with the same tap that set it. */
+.rs-pill.gone{min-width:56px}
+.rs-pill.gone.on{background:#b06a00;border-color:#b06a00;color:#fff}
+.rs-row.left .rs-nm{color:#9aa4b2;text-decoration:line-through;text-decoration-color:#cbd3dd}
 /* The badge exactly as the board draws it, so the legend up top is a preview
    and not a description of one. */
 .rs-rank{display:inline-block;padding:1px 6px;border-radius:5px;
@@ -48,7 +56,7 @@ export const ROSTER_CSS = OOO_CSS + `
 /* On a narrow phone the pending-change chip is the first thing to give up its
    space — the pills and the name both have to stay legible. */
 @media (max-width:380px){
-  .rs-was{display:none}
-  .rs-pill{min-width:46px;padding:9px 7px}
+  .rs-pill{min-width:44px;padding:9px 6px}
+  .rs-pill.gone{min-width:48px}
 }
 `;

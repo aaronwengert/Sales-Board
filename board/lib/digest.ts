@@ -34,7 +34,12 @@ type Team = { team: string; aes: AE[]; sidelined: { name: string; why: string }[
    *  board rows the tiles use, and over EVERY member — managers, dashed
    *  reps and anyone out of office included — because a team's book does
    *  not shrink because someone is not being scored today. */
-  pipe: number };
+  pipe: number;
+  /** The part of `pipe` with no AE behind it any more: the book of someone who
+   *  has left, still sitting on this team's desks until it is reassigned.
+   *  Already included in `pipe`; carried separately only so the card can say
+   *  so rather than appearing to lose money overnight. */
+  unassigned: number };
 
 /** Team rollups, using exactly the board's inclusion rules. */
 export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: number; pct: number } {
@@ -44,7 +49,7 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
 
   for (const r of b.rows) {
     const name = r[0], team = teamOf(r[1]);
-    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0, pipe: 0 });
+    if (!byTeam.has(team)) byTeam.set(team, { team, aes: [], sidelined: [], hidden: [], manager: null, hit: 0, n: 0, pct: 0, pipe: 0, unassigned: 0 });
     const g = byTeam.get(team)!;
     // Pipeline is banked first, ahead of every early continue below: an OOO rep
     // or a sales manager still has a book, and dropping it here would quietly
@@ -107,6 +112,14 @@ export function digestTeams(b: BoardData): { teams: Team[]; hit: number; total: 
   }
 
   const teams = [...byTeam.values()];
+  // A departed rep has no row above, so their book never reached g.pipe. Put
+  // it back against the team it is still sitting on: the loans did not go
+  // anywhere when the person did, and a card that quietly drops them reads as
+  // a team that lost pipeline overnight.
+  for (const g of teams) {
+    const parked = b.housePipeByTeam?.[g.team] || 0;
+    if (parked > 0) { g.pipe += parked; g.unassigned = parked; }
+  }
   for (const g of teams) g.manager = b.teamManagers?.[g.team] || null;
   for (const g of teams) {
     // Hitters first inside a team, so a card reads as "who is in" then "who is working".
@@ -719,10 +732,12 @@ export function renderDigest(
     // Two right-hand stats, each a caps label over a number. Both are nowrap:
     // the band may run out of room on a narrow phone, and a wrapped "$12.4M"
     // is worse than a team name that takes a second line.
-    const statCell = (label: string, value: string, ink: string, padLeft: number) =>
+    const statCell = (label: string, value: string, ink: string, padLeft: number, note = "") =>
       `<td align="right" valign="middle" style="padding-left:${padLeft}px">`
       + `<div style="font-family:${F};font-size:8.5px;font-weight:800;line-height:1.2;color:#68737f;letter-spacing:.7px;white-space:nowrap">${label}</div>`
-      + `<div style="font-family:${F};font-size:16px;font-weight:800;line-height:1.25;color:${ink};white-space:nowrap;padding-top:1px">${value}</div></td>`;
+      + `<div style="font-family:${F};font-size:16px;font-weight:800;line-height:1.25;color:${ink};white-space:nowrap;padding-top:1px">${value}</div>`
+      + (note ? `<div style="font-family:${F};font-size:8.5px;font-weight:600;line-height:1.2;color:#8b95a6;white-space:nowrap;padding-top:1px">${esc(note)}</div>` : "")
+      + `</td>`;
     return tbl(`width="100%" bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${LINE}"`,
       bnr
       + `<tr><td bgcolor="${band.bg}" style="background:${band.bg};padding:9px 12px;border-bottom:2px solid ${c}">`
@@ -733,7 +748,7 @@ export function renderDigest(
         + `</div>`
         + (g.manager ? `<div style="font-family:${F};font-size:10.5px;font-weight:600;line-height:1.4;color:#6f7d8c;padding-top:1px">${esc(g.manager)}</div>` : "")
         + `</td>`
-        + statCell("PIPELINE", mny(g.pipe), INK, 10)
+        + statCell("PIPELINE", mny(g.pipe), INK, 10, g.unassigned > 0 ? `incl. ${mny(g.unassigned)} unassigned` : "")
         + statCell("ON GOAL", `${g.hit}/${g.n}`, clean ? GRN : c, 14)
         + `</tr>`)
       + `</td></tr><tr><td style="padding:8px 0 0">${tbl(`width="100%" style="table-layout:fixed;width:100%"`, rows)}</td></tr>`);

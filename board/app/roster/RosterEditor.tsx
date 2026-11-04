@@ -19,45 +19,62 @@ function keyed(m: Record<string, Title>) {
   return out;
 }
 
+function keyedStr(m: Record<string, string>) {
+  const out = new Map<string, string>();
+  for (const [n, v] of Object.entries(m || {})) out.set(key(n), v);
+  return out;
+}
+
 export function RosterEditor({
-  initial, groups, configured, tokenVar, savedBy, savedAt,
+  initial, initialDeparted, groups, configured, tokenVar, savedBy, savedAt, today,
 }: {
   initial: Record<string, Title>;
+  initialDeparted: Record<string, string>;
   groups: Group[];
   configured: boolean;
   tokenVar?: string;
   savedBy?: string;
   savedAt?: string;
+  today: string;
 }) {
   // The committed map (what the store holds) and the working map (what is on
   // screen) are kept apart so the Save button can tell whether there is
   // anything to save, and so a failed save leaves the edits intact.
   const [saved, setSaved] = useState<Record<string, Title>>(initial);
   const [sel, setSel] = useState<Map<string, Title>>(() => keyed(initial));
+  const [savedGone, setSavedGone] = useState<Record<string, string>>(initialDeparted);
+  const [gone, setGone] = useState<Map<string, string>>(() => keyedStr(initialDeparted));
   const [by, setBy] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
   const savedKeys = useMemo(() => keyed(saved), [saved]);
+  const goneKeys = useMemo(() => keyedStr(savedGone), [savedGone]);
 
   // What would change on save, named rather than counted — "3 changes" tells
   // you less than seeing which three.
   const changes = useMemo(() => {
     const list: string[] = [];
     for (const g of groups) for (const n of g.aes) {
-      const k = key(n), was = savedKeys.get(k), now = sel.get(k);
+      const k = key(n);
+      const leftWas = goneKeys.has(k), leftNow = gone.has(k);
+      if (leftWas !== leftNow) { list.push(`${n} ${leftNow ? "left" : "back"}`); continue; }
+      // A rank change on someone who has left changes nothing anyone can see,
+      // so it is not worth listing as a pending change.
+      if (leftNow) continue;
+      const was = savedKeys.get(k), now = sel.get(k);
       if (was === now) continue;
       list.push(`${n} ${was || "AE"} → ${now || "AE"}`);
     }
     return list;
-  }, [sel, savedKeys, groups]);
+  }, [sel, savedKeys, gone, goneKeys, groups]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { SR: 0, AVP: 0 };
-    for (const t of sel.values()) c[t] = (c[t] || 0) + 1;
+    for (const [k, t] of sel) if (!gone.has(k)) c[t] = (c[t] || 0) + 1;
     return c;
-  }, [sel]);
+  }, [sel, gone]);
 
   /** Setting the rank a person already holds clears it, so the row doubles as
    *  its own undo and there is no separate "none" button to hunt for. */
@@ -70,27 +87,47 @@ export function RosterEditor({
     });
   }
 
+  /** Marking someone as having left takes them off the board from the next
+   *  refresh. Their rank is kept rather than cleared, so putting them back is
+   *  one tap and does not quietly demote them. */
+  function toggleGone(n: string) {
+    setOk(""); setErr("");
+    setGone((prev) => {
+      const next = new Map(prev), k = key(n);
+      if (next.has(k)) next.delete(k); else next.set(k, goneKeys.get(k) || today);
+      return next;
+    });
+  }
+
   async function save() {
     setBusy(true); setErr(""); setOk("");
     // Send roster spellings, not the normalised keys: the board matches
     // loosely, but the stored document should stay readable.
     const titles: Record<string, Title> = {};
+    const departed: Record<string, string> = {};
     for (const g of groups) for (const n of g.aes) {
-      const t = sel.get(key(n));
+      const k = key(n);
+      const t = sel.get(k);
       if (t) titles[n] = t;
+      const d = gone.get(k);
+      if (d !== undefined) departed[n] = d || today;
     }
     try {
       const res = await fetch("/api/roster", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ titles, by: by.trim() || undefined }),
+        body: JSON.stringify({ titles, departed, by: by.trim() || undefined }),
       });
       const j = await res.json();
       if (!res.ok || !j.ok) { setErr(j?.error || "Could not save. Try again."); return; }
       setSaved(j.titles || {});
       setSel(keyed(j.titles || {}));
-      const n = Object.keys(j.titles || {}).length;
-      setOk(`Saved. ${n} ${n === 1 ? "AE holds a rank" : "AEs hold a rank"} — the board picks this up on its next refresh.`);
+      setSavedGone(j.departed || {});
+      setGone(keyedStr(j.departed || {}));
+      const left = Object.keys(j.departed || {}).length;
+      const ranked = Object.keys(j.titles || {}).length;
+      setOk(`Saved — the board picks this up on its next refresh. ${ranked} ranked`
+        + (left ? `, ${left} off the board (their pipeline stays in the totals).` : "."));
     } catch {
       setErr("Could not reach the server. Your changes are still on screen — try Save again.");
     } finally { setBusy(false); }
@@ -113,6 +150,11 @@ export function RosterEditor({
             A rank shows as a badge beside the name on the board. Everyone holds one rank
             at most &mdash; tap it again to go back to plain AE. It is a label only: it changes
             no goal, no pipeline shading, and no total.
+          </p>
+          <p className="oo-sub">
+            <strong>LEFT</strong> takes someone off the board from the next refresh. Every dollar
+            already on their files keeps counting in the totals and stays on their team&rsquo;s
+            card, marked unassigned, until the accounts are reassigned.
           </p>
           <p className="oo-sub">
             {TITLES.map((t, i) => (
@@ -147,10 +189,19 @@ export function RosterEditor({
           <ul className="rs-list">
             {g.aes.map((n) => {
               const k = key(n), now = sel.get(k), was = savedKeys.get(k);
+              const left = gone.has(k), leftWas = goneKeys.has(k);
               return (
-                <li className={"rs-row" + (now ? " on" : "")} key={n}>
-                  <span className="rs-nm">{n}</span>
-                  {now !== was && <span className="rs-was">{was || "AE"} → {now || "AE"}</span>}
+                <li className={"rs-row" + (now && !left ? " on" : "") + (left ? " left" : "")} key={n}>
+                  {/* Name and pending-change note share a column so the name
+                      keeps the full width of its line. Putting the note beside
+                      it cost about 110px and truncated people to "John …",
+                      which is no use on the screen where you pick a person. */}
+                  <span className="rs-main">
+                    <span className="rs-nm">{n}</span>
+                    {left !== leftWas
+                      ? <span className="rs-was">{left ? "OFF THE BOARD" : "BACK ON"}</span>
+                      : (!left && now !== was && <span className="rs-was">{was || "AE"} → {now || "AE"}</span>)}
+                  </span>
                   <span className="rs-seg" role="group" aria-label={`Rank for ${n}`}>
                     {TITLES.map((t) => (
                       <button
@@ -159,12 +210,24 @@ export function RosterEditor({
                         className={"rs-pill " + t.toLowerCase() + (now === t ? " on" : "")}
                         aria-pressed={now === t}
                         title={TITLE_LABEL[t]}
-                        disabled={busy}
+                        disabled={busy || left}
                         onClick={() => pick(n, t)}
                       >
                         {t}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      className={"rs-pill gone" + (left ? " on" : "")}
+                      aria-pressed={left}
+                      title={left
+                        ? `${n} is off the board — tap to put them back`
+                        : `Take ${n} off the board, keeping their pipeline in the totals`}
+                      disabled={busy}
+                      onClick={() => toggleGone(n)}
+                    >
+                      {left ? "OFF" : "LEFT"}
+                    </button>
                   </span>
                 </li>
               );

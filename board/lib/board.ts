@@ -40,7 +40,17 @@ export const TEAM_MANAGERS: Record<string, string> = {
 // goal, and they show on the board (tagged "· former") any month they funded.
 // Their old team no longer exists, and pinning them to a surviving one would
 // credit that team with funded dollars it never sold. They group under Former.
-const FORMER_TEAM: Record<string, string> = { "aj laux": "Former", "amari aiu": "Former" };
+// Reese Rogers, Jeff Laux and Adam Paniagua are house accounts (below) whose
+// team no longer exists, so they are listed here too. Without an entry here
+// counts() rejects them — chanFor() needs a team and they have none — and
+// every dollar still on their files is dropped from the board instead of
+// staying in the totals, which is the exact opposite of what a house account
+// is for. Being in HOUSE still keeps them off the board as a row; this only
+// restores the money.
+const FORMER_TEAM: Record<string, string> = {
+  "aj laux": "Former", "amari aiu": "Former",
+  "reese rogers": "Former", "jeff laux": "Former", "adam paniagua": "Former",
+};
 
 // Scheduled removals: each AE drops off the board on/after this Arizona date —
 // no longer seeded, counted, or shown. Set for reps leaving on a known date so
@@ -57,6 +67,16 @@ const RETIRE: Record<string, string> = {
 // but every dollar already on their files keeps counting in the team tiles, so
 // removing a rep never silently deletes production from the month. There is no
 // visible "House" row; the money simply stays in the totals up top.
+//
+// IMPORTANT: a house account must still be reachable by teamFor() — either by
+// staying in its TEAMS array or, if that team is gone, through FORMER_TEAM
+// above. counts() asks chanFor(), chanFor() asks teamFor(), and a name with no
+// team is dropped from every total rather than housed.
+//
+// Departures entered on /roster are merged with this list at request time (see
+// `departed` in computeBoard's options), so letting someone go does not need a
+// commit — and a just-terminated employee's name never has to be written into
+// this repo.
 const HOUSE = new Set(["reese rogers", "jeff laux", "adam paniagua", "logan kincade"]);
 function isHouse(ae: string) { return HOUSE.has(norm(ae)); }
 
@@ -265,6 +285,10 @@ export type BoardData = {
   noTierAEs: string[];
   /** Rows new enough that their numbers carry a NEW tag. */
   newAEs: string[];
+  /** Pipeline belonging to housed reps, by the team they were on. Has no row
+   *  of its own anywhere; the daily email folds it back into that team's total
+   *  and labels it unassigned. */
+  housePipeByTeam: Record<string, number>;
   /** Rows whose AE holds a rank above plain AE, from the /roster screen:
    *  display name -> "SR" | "AVP". Purely a label: it changes no goal, no
    *  shading, and no total. */
@@ -317,10 +341,22 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
    *  that is not on the roster is dropped, so a stale entry can never invent a
    *  row. Each AE holds at most one rank. */
   titles?: Record<string, string>;
+  /** AEs marked as having left, from the /roster screen's store. Treated
+   *  exactly like a declared house account: no row, but every dollar on their
+   *  files keeps counting. Matched loosely and ignored unless the name is on
+   *  the roster. */
+  departed?: string[];
 } = {}): BoardData {
   const cfg = BOARDS[channel];
   const rd = extractProd(prodCsv);
   const az = opts.asOf || azNow();
+  // Declared house accounts plus whoever /roster says has left. One set, so
+  // the rest of this function cannot tell — or care — which half a name came
+  // from.
+  const HOUSED = new Set<string>([...HOUSE]);
+  for (const n of opts.departed || []) { const k = norm(n); if (k) HOUSED.add(k); }
+  const housed = (ae: string) => HOUSED.has(norm(ae));
+
   // Titles, normalised once so the per-row lookup below is a plain map read.
   const TITLE_BY_KEY = new Map<string, string>();
   for (const [n, t] of Object.entries(opts.titles || {})) {
@@ -347,6 +383,13 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   const today: Record<string, [number, number, number]> = {};
   const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
   const HOUSE_AGG: Agg = { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 };
+  // A housed rep's pipeline, kept against the team they were on. The board's
+  // own tiles read the global counters and never needed this, but the daily
+  // email builds each team's pipeline by summing that team's rows — and a
+  // housed rep has no row. Without this the morning after a departure a team's
+  // number simply falls, with nothing on the card to say why. The book has not
+  // gone anywhere; it is sitting on that team's desks waiting to be reassigned.
+  const housePipeByTeam: Record<string, number> = {};
 
   let pipeAll = 0, pipeLocked = 0, pipeSoft = 0, pipeStale = 0, pipeStaleN = 0, ctcAll = 0, ctcUnits = 0, fundAll = 0, fundUnits = 0, eligAll = 0;
   let docCheckToday = 0, uwToday = 0;
@@ -411,7 +454,8 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     if (wh && chOk) {
       // House reps accumulate into a throwaway bucket: the team-level counters
       // in these branches still fire, but nothing lands in `ae`, so no row.
-      const a = isHouse(name) ? HOUSE_AGG : A(name);
+      const isHoused = housed(name);
+      const a = isHoused ? HOUSE_AGG : A(name);
       if (inPipe) {
         pipeAll += amt;
         if (locked) pipeLocked += amt;
@@ -420,6 +464,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
       }
       if (inPipeAE) {
         a.pipe += amt;
+        if (isHoused) { const t = teamFor(name); if (t) housePipeByTeam[t] = (housePipeByTeam[t] || 0) + amt; }
         if (!locked) a.pipeUn += amt;
         // Idle bands for hard-pipeline loans: 30–59 days / 60+ days since the
         // last status change.
@@ -435,7 +480,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
         a.goalElig += amt; eligAll += amt;
       }
       // Subs = loans OPENED in the reporting month (Opened Date).
-      if (od && od.m === lm && od.y === ly && !isHouse(name)) {
+      if (od && od.m === lm && od.y === ly && !housed(name)) {
         mtd[name] = (mtd[name] || 0) + 1;
         if (od.m === todayM && od.d === todayD && od.y === todayY) {
           today[name] = today[name] || [0, 0, 0];
@@ -449,7 +494,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   // show on the board — with their calls, tickets, and subs — even before they
   // have any funded production. (Runs before the calls/tickets fill below.)
   for (const [, d] of Object.entries(TEAMS)) {
-    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm) && !isHouse(nm) && !GOAL_DASH.has(norm(nm))) A(nm);
+    if (d.channel === channel) for (const nm of d.aes) if (!retired(nm) && !housed(nm) && !GOAL_DASH.has(norm(nm))) A(nm);
   }
 
   // Call activity → outbound calls + talk minutes per board AE.
@@ -486,7 +531,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     // Team-wide total: every ticket logged today by a rep on this channel
     // (excludes non-roster/system names like "Win Team").
     for (const nm in byNorm) {
-      if (retired(nm) || isHouse(nm)) continue;
+      if (retired(nm) || housed(nm)) continue;
       const t = NAME2TEAM[nm];
       if ((t && TEAM2CH[t] === channel) || (channel === "wholesale" && nm in FORMER_TEAM)) tixTotal += byNorm[nm];
     }
@@ -532,6 +577,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [NAME2DISPLAY[k] || k, v])),
     noTierAEs: rows.map((r) => r[0]).filter(noTier),
     newAEs: rows.map((r) => r[0]).filter(isNewAE),
+    housePipeByTeam,
     titleAEs: Object.fromEntries(
       rows.map((r) => r[0])
         .map((n) => [n, TITLE_BY_KEY.get(norm(n))])
