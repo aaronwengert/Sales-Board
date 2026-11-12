@@ -433,16 +433,25 @@ def main() -> int:
             out.write_text(payload["html"], encoding="utf-8")
             log.info("Dry run: wrote %s (%s)", out, payload["subject"])
             return 0
+        # Same rule as the daily send: a list set on /email wins over
+        # config.json, and an explicit --to still wins over both.
+        board_to = parse_recipients(payload.get("recipients"))
         try:
             if to:
                 log.info("Test send to %d recipient(s): %s", len(to), ", ".join(to))
-            send_digest(cfg, payload, to=to or None, subject_prefix="[TEST] " if to else "")
+            send_digest(cfg, payload, to=to or board_to or None, subject_prefix="[TEST] " if to else "")
         except Exception:
             log.exception("Weekly send failed.")
             return 1
         return 0
 
     if args.digest:
+        # Bound before the skip check below, which reads it. It used to be
+        # assigned afterwards: harmless while skip was weekends-only, because
+        # `and` short-circuits before reaching it, but an UnboundLocalError the
+        # moment skip became true on a weekday — which is exactly what the
+        # send-window gate makes it do.
+        to = parse_recipients(args.to) or parse_recipients(os.environ.get("DIGEST_TO"))
         try:
             payload = fetch_digest(cfg)
         except Exception:
@@ -451,7 +460,11 @@ def main() -> int:
         if payload.get("skip") and not args.force and not to:
             log.info("Digest skipped (%s).", payload.get("reason") or "board said so")
             return 0
-        to = parse_recipients(args.to) or parse_recipients(os.environ.get("DIGEST_TO"))
+        # A list set on /email belongs to the board, not to this file: it lives
+        # in the private store rather than in a public repo, and changing it
+        # does not need a deploy. An explicit --to still wins, because that is
+        # a test send and the whole point of it is to go somewhere else.
+        board_to = parse_recipients(payload.get("recipients"))
         if args.dry_run:
             out = BASE_DIR / "digest_preview.html"
             out.write_text(payload["html"], encoding="utf-8")
@@ -460,7 +473,7 @@ def main() -> int:
         try:
             if to:
                 log.info("Test send to %d recipient(s): %s", len(to), ", ".join(to))
-            send_digest(cfg, payload, to=to or None,
+            send_digest(cfg, payload, to=to or board_to or None,
                         subject_prefix="[TEST] " if to else "")
         except Exception:
             log.exception("Digest send failed.")

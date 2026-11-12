@@ -6,6 +6,7 @@ import { dialPng, dialPngDataUri } from "@/lib/dialPng";
 import { TEAM_LOGOS, teamLogoCid, teamLogoSrcs } from "@/lib/teamLogos";
 import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 import type { Channel } from "@/lib/board";
+import { readEmailCfg, hourAllowed, noteCollected } from "@/lib/emailcfg";
 
 export const dynamic = "force-dynamic";
 
@@ -104,9 +105,34 @@ export async function GET(req: NextRequest) {
     if (asJson) {
       // `skip` lets a caller decline to send without having to know the
       // calendar: weekends have no activity and nobody is watching.
+      //
+      // The hour gate rides the same rail. The scheduler fires on its own
+      // clock and cannot be reconfigured from here, so the board answers
+      // "not this hour" for firings outside the chosen window — which is how
+      // the send times are set on /email rather than at cron-job.org.
+      // ?force=1 is how a deliberate send says it already knows.
+      const cfg = await readEmailCfg();
       const weekend = az.dow === "Sat" || az.dow === "Sun";
+      const forced = q.get("force") === "1";
+      const offHour = !forced && !hourAllowed(cfg, az.hour);
+      const skip = weekend || offHour;
+      const reason = weekend ? "weekend" : offHour ? `hour ${az.hour} not in send window` : null;
+
+      // Recipients come from the board when the screen has set them, so the
+      // addresses live in a private store rather than in a public repo. An
+      // empty list is not a configuration: it means nobody has set one, and
+      // the mailer falls back to its own config.
+      // Named `recipients`, not `to`: the weekly endpoint already uses `to`
+      // for the end of its date range, and one of these payloads being a list
+      // of people while the other is a date is exactly the kind of thing that
+      // reads fine and mails the wrong place.
+      const recipients = cfg.daily.to;
+      if (!skip && !q.get("dry")) await noteCollected("daily", recipients.length);
+
       return NextResponse.json({
-        ok: true, skip: weekend, reason: weekend ? "weekend" : null,
+        ok: true, skip, reason,
+        recipients,
+        sendHours: cfg.daily.hours,
         subject: digest.subject, preheader: digest.preheader, html: digest.html,
         // Attach each of these inline with Content-ID <dial-KEY>; the HTML
         // already references cid:dial-KEY. Rasterise to PNG at 224x224 if the

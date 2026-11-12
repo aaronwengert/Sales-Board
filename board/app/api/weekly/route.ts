@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rollRange, businessDays, defaultWeek, previousWeek, rangeLabel } from "@/lib/rollup";
+import { readEmailCfg, noteCollected } from "@/lib/emailcfg";
 import { renderWeekly, weekDials } from "@/lib/weekly";
 import { dialSvg, dialDataUri } from "@/lib/dial";
 import { dialPng, dialPngDataUri } from "@/lib/dialPng";
@@ -83,10 +84,18 @@ export async function GET(req: NextRequest) {
     });
 
     if (asJson) {
+      // The weekly list falls back to the daily one: most of the time the
+      // same people want both, and nobody should have to type the list twice
+      // to get the behaviour they already had.
+      const cfg = await readEmailCfg();
+      const recipients = cfg.weekly.to.length ? cfg.weekly.to : cfg.daily.to;
+      if (!q.get("dry")) await noteCollected("weekly", recipients.length);
+
       return NextResponse.json({
         ok: true,
         subject: weekly.subject, preheader: weekly.preheader, html: weekly.html,
         from, to,
+        recipients,
         dialSource,
         dials: dials.map((d) => ({
           cid: `dial-${d.key}`, key: d.key, label: d.label, value: d.value, goal: d.goal,
