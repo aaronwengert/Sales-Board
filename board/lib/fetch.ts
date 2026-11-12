@@ -44,7 +44,7 @@ function client() {
   return google.drive({ version: "v3", auth });
 }
 
-type DFile = { id: string; name: string; modifiedTime: string };
+type DFile = { id: string; name: string; modifiedTime: string; size?: number };
 
 /** Every CSV in a folder, newest first, paging until `max` or exhaustion.
  *  The live board only ever wants the newest file and so asks for 25; a week
@@ -57,7 +57,7 @@ export async function listAllCsvs(folderId: string, max = 1200): Promise<DFile[]
   do {
     const res: any = await d.files.list({
       q: `'${folderId}' in parents and trashed = false and (mimeType = 'text/csv' or name contains '.csv')`,
-      fields: "nextPageToken, files(id,name,modifiedTime)",
+      fields: "nextPageToken, files(id,name,modifiedTime,size)",
       orderBy: "modifiedTime desc",
       pageSize: 1000,
       pageToken,
@@ -65,7 +65,7 @@ export async function listAllCsvs(folderId: string, max = 1200): Promise<DFile[]
       includeItemsFromAllDrives: true,
     });
     for (const f of res.data.files || []) {
-      out.push({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || "" });
+      out.push({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || "", size: Number(f.size) || 0 });
       if (out.length >= max) return out;
     }
     pageToken = res.data.nextPageToken || undefined;
@@ -81,13 +81,13 @@ async function listCsvs(folderId: string): Promise<DFile[]> {
   const d = client();
   const res: any = await d.files.list({
     q: `'${folderId}' in parents and trashed = false and (mimeType = 'text/csv' or name contains '.csv')`,
-    fields: "files(id,name,modifiedTime)",
+    fields: "files(id,name,modifiedTime,size)",
     orderBy: "modifiedTime desc",
     pageSize: 25,
     supportsAllDrives: true,
     includeItemsFromAllDrives: true,
   });
-  return (res.data.files || []).map((f: any) => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || "" }));
+  return (res.data.files || []).map((f: any) => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime || "", size: Number(f.size) || 0 }));
 }
 async function download(id: string): Promise<string> {
   const d = client();
@@ -101,6 +101,17 @@ function azTimeLabel(iso: string): string {
     return t + " MST";
   } catch { return "—"; }
 }
+/** Does a tickets CSV carry anything beyond its header row? */
+function hasRows(csv: string): boolean {
+  let seenHeader = false;
+  for (const line of csv.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    if (!seenHeader) { seenHeader = true; continue; }
+    return true;
+  }
+  return false;
+}
+
 function azDateStr(iso: string): string {
   return new Date(new Date(iso).toLocaleString("en-US", { timeZone: "America/Phoenix" })).toDateString();
 }
@@ -272,14 +283,28 @@ export async function getBoard(channel: Channel = "wholesale"): Promise<BoardDat
 
     // Newest tickets CSV that actually parses as text (skips the occasional
     // image accidentally saved with a .csv name). Header has "User Name".
+    //
+    // The ticket export counts its "today" in UTC while the business — and
+    // every other feed here — runs on Arizona days. At 00:00 UTC, which is
+    // 5pm in Phoenix, its day rolls over and it starts publishing a
+    // header-only file: the day's tickets are not reset, they are simply no
+    // longer being reported. Taking the newest file at face value therefore
+    // wipes the ticket column every afternoon at five.
+    //
+    // So: among the files written TODAY in Arizona, prefer the newest one that
+    // actually carries rows. The feed is cumulative within a day, so that file
+    // is the day's running total and the right number to keep showing until
+    // the next real one lands. Deliberately scoped to today — an empty morning
+    // must read as zero tickets so far, never as yesterday's total.
     let ticketsCsv: string | null = null, tixIsToday = false;
+    const today = azTodayStr();
     for (const f of ticketFiles) {
       const text = await download(f.id);
-      if (text.includes("User Name")) {
-        ticketsCsv = text;
-        tixIsToday = azDateStr(f.modifiedTime) === azTodayStr();
-        break;
-      }
+      if (!text.includes("User Name")) continue;
+      const isToday = azDateStr(f.modifiedTime) === today;
+      if (ticketsCsv === null) { ticketsCsv = text; tixIsToday = isToday; }  // newest readable, whatever it holds
+      if (!isToday) break;                                                   // older than today: stop looking
+      if (hasRows(text)) { ticketsCsv = text; tixIsToday = true; break; }    // today's newest file with data
     }
 
     return computeBoard(prodCsv, callsCsv, callsIsToday, azTimeLabel(prodFile.modifiedTime), callsLabel, channel, ticketsCsv, tixIsToday, ooo, { titles: roster.titles, departed: Object.keys(roster.departed) });

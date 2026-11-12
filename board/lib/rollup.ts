@@ -27,7 +27,7 @@ import type { DayRoll, WeekTeam, WeekAE } from "./weekly";
 import { readEntries, namesOn } from "./ooo";
 import { listAllCsvs, driveDownload, FOLDERS } from "./fetch";
 
-type DFile = { id: string; name: string; modifiedTime: string };
+type DFile = { id: string; name: string; modifiedTime: string; size?: number };
 
 /** The Arizona calendar day an ISO timestamp falls on. */
 export function azDay(iso: string): string {
@@ -73,6 +73,27 @@ export function lastPerDay(files: DFile[], days: string[]): Record<string, DFile
     const d = azDay(f.modifiedTime);
     if (!want.has(d) || out[d]) continue;
     out[d] = f;
+  }
+  return out;
+}
+
+/** The fullest snapshot of each day rather than the last one.
+ *
+ *  For a cumulative within-day feed the biggest file IS the day's final total,
+ *  which makes this equivalent to lastPerDay whenever the feed behaves. It is
+ *  not equivalent for tickets: that export counts its day in UTC, so from 5pm
+ *  Arizona onward it publishes a header-only file, and every day's LAST
+ *  snapshot is empty. Picking by size steps over those and recovers the real
+ *  day totals. */
+export function fullestPerDay(files: DFile[], days: string[]): Record<string, DFile> {
+  const want = new Set(days);
+  const out: Record<string, DFile> = {};
+  for (const f of files) {
+    if (!f.modifiedTime) continue;
+    const d = azDay(f.modifiedTime);
+    if (!want.has(d)) continue;
+    const cur = out[d];
+    if (!cur || (f.size || 0) > (cur.size || 0)) out[d] = f;
   }
   return out;
 }
@@ -200,7 +221,7 @@ export async function rollRange(from: string, to: string, channel: Channel = "wh
   // per-day pick rather than after, where it would shadow a good file.
   const prodByDay = lastPerDay(prodFiles.filter((f) => /Sales Board/i.test(f.name)), days);
   const callsByDay = lastPerDay(callFiles, days);
-  const tixByDay = lastPerDay(tixFiles, days);
+  const tixByDay = fullestPerDay(tixFiles, days);
 
   const fetched = await Promise.all(days.map(async (day) => {
     const [prod, calls, tix] = await Promise.all([
