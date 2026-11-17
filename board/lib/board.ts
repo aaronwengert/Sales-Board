@@ -274,7 +274,9 @@ function azDateOf(iso: string): { m: number; d: number; y: number } {
 }
 
 export type BoardData = {
-  rows: [string, string, number, number, number, number, number, number, number, number, number, number][];
+  /** …, b30, b60, then loan counts u0/u30/u60 (under 30 days, 30–59, 60+),
+   *  then rate-locked dollars k0/k30/k60 for those same three buckets. */
+  rows: [string, string, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number][];
   today: Record<string, [number, number, number]>;
   mtd: Record<string, number>;
   tix: Record<string, number>;
@@ -377,12 +379,19 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
   // is the honest reading.
   const ly = todayY, lm = todayM;
 
-  type Agg = { pipe: number; pipeUn: number; b30: number; b60: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
+  // u0/u30/u60: loan COUNTS per aging bucket, alongside the dollars in
+  // b30/b60. The aging view needs "how many files" as well as "how much", and
+  // a count cannot be inferred from a sum.
+  // k0/k30/k60: RATE-LOCKED dollars per aging bucket, the counterpart to the
+  // u* counts. Locked tells you a borrower is committed, so the mix of locked
+  // money inside an idle bucket is the difference between a stalled file worth
+  // chasing and one that has quietly gone away.
+  type Agg = { pipe: number; pipeUn: number; b30: number; b60: number; u0: number; u30: number; u60: number; k0: number; k30: number; k60: number; ctc: number; ctcU: number; fund: number; units: number; goalElig: number; total: number };
   const ae: Record<string, Agg> = {};
   const mtd: Record<string, number> = {};
   const today: Record<string, [number, number, number]> = {};
-  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
-  const HOUSE_AGG: Agg = { pipe: 0, pipeUn: 0, b30: 0, b60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 };
+  const A = (n: string) => (ae[n] ||= { pipe: 0, pipeUn: 0, b30: 0, b60: 0, u0: 0, u30: 0, u60: 0, k0: 0, k30: 0, k60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 });
+  const HOUSE_AGG: Agg = { pipe: 0, pipeUn: 0, b30: 0, b60: 0, u0: 0, u30: 0, u60: 0, k0: 0, k30: 0, k60: 0, ctc: 0, ctcU: 0, fund: 0, units: 0, goalElig: 0, total: 0 };
   // A housed rep's pipeline, kept against the team they were on. The board's
   // own tiles read the global counters and never needed this, but the daily
   // email builds each team's pipeline by summing that team's rows — and a
@@ -467,8 +476,14 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
         if (isHoused) { const t = teamFor(name); if (t) housePipeByTeam[t] = (housePipeByTeam[t] || 0) + amt; }
         if (!locked) a.pipeUn += amt;
         // Idle bands for hard-pipeline loans: 30–59 days / 60+ days since the
-        // last status change.
-        if (isStale) { if (sdKey <= cut60Key) a.b60 += amt; else a.b30 += amt; }
+        // last status change. Every loan reaching here is hard pipeline — the
+        // soft statuses are excluded from the AE column — so the three buckets
+        // partition it exactly, and a loan with no usable status date counts
+        // as fresh rather than being dropped.
+        if (isStale) {
+          if (sdKey <= cut60Key) { a.b60 += amt; a.u60 += 1; if (locked) a.k60 += amt; }
+          else { a.b30 += amt; a.u30 += 1; if (locked) a.k30 += amt; }
+        } else { a.u0 += 1; if (locked) a.k0 += amt; }
       }
       // A loan counted anywhere in the pipeline never also counts as CTC or
       // funded — gate on inPipe (the team rule), not the stricter AE rule, so
@@ -545,7 +560,7 @@ export function computeBoard(prodCsv: string, callsCsv: string | null, callsIsTo
     const teamName = isFormer(name) ? `${FORMER_TEAM[norm(name)]} · former` : teamFor(name);
     const avg = a.units ? a.fund / a.units : 0;
     const total = a.fund + a.ctc;
-    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.b30, a.b60]);
+    rows.push([name, teamName, a.pipe, a.units, a.fund, Math.round(avg), a.ctc, total, a.ctcU, a.pipeUn, a.b30, a.b60, a.u0, a.u30, a.u60, a.k0, a.k30, a.k60]);
   }
   rows.sort((x, y) => y[7] - x[7]);
 

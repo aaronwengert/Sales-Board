@@ -73,6 +73,11 @@ export const TV2_CSS = `
 
 /* ---- KPI band: exactly two tiles, one per section below ---- */
 .tv2band{display:flex;gap:20px;margin-top:9px;flex:0 0 auto}
+/* The aging band runs taller: its left card carries a timeline rather than a
+   number and four stats, and squeezing that into 127px made every element in
+   it a little too small to read across a room. The cost is about two pixels
+   of row height on that screen only. */
+.tv2band.tall .card{height:144px}
 .tv2band .card{flex:1;height:127px;border-radius:14px;padding:9px 22px 8px;box-sizing:border-box;position:relative;overflow:hidden}
 .tv2band .krow{display:flex;align-items:center;justify-content:space-between}
 .tv2band .k-amber .pill{background:#fdf0d8;color:#8a6d0a;box-shadow:inset 0 0 0 1px #f0dcae}
@@ -80,6 +85,36 @@ export const TV2_CSS = `
 .tv2band .kl{font-size:13.5px;font-weight:700;letter-spacing:1px;color:var(--muted)}
 .tv2band .kb{font-size:33px;font-weight:800;letter-spacing:-1px;line-height:1.02;margin-top:1px;white-space:nowrap}
 .tv2band .kn{font-size:15px;font-weight:700;color:var(--muted);margin-top:6px}
+/* Aging timeline. Today sits at the right and time runs backwards to the left,
+   which is the direction a pipeline actually ages. The three segments are
+   equal width because the axis is time, not money — the dollars are printed
+   above each one rather than encoded in its length, so a tiny 60+ bucket
+   cannot hide in a sliver. */
+.tl{margin-top:7px}
+.tlrow,.tlax{display:flex;gap:4px}
+.tlseg{flex:1 1 0;min-width:0;text-align:right;padding-right:2px}
+.tlk{display:block;font-size:10px;font-weight:700;letter-spacing:.7px;color:var(--muted)}
+.tlv{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.12}
+.tlv em{font-style:normal;font-size:11.5px;font-weight:600;color:#8b95a6;
+  letter-spacing:0;margin-left:6px;white-space:nowrap}
+.tlu{display:block;font-size:11.5px;font-weight:600;color:#8b95a6;line-height:1.2}
+/* How much of the bucket the borrower has actually committed to. It falls off
+   a cliff with age — the share locked is the clearest read on whether an idle
+   file is stalled or gone. */
+.tlk2{display:block;margin-top:1px;font-size:11.5px;font-weight:600;color:#8b95a6}
+.tlk2 b{font-weight:800;color:#6b7684}
+.tlbar{display:flex;gap:4px;margin-top:5px}
+.tlbar i{flex:1 1 0;height:11px;border-radius:3px}
+/* The gaps between segments are the 30- and 60-day marks: a tick drawn on top
+   of a joined bar reads as a defect, a gap reads as a boundary. */
+/* Pipeline from this bucket forward to today: the 60+ group's total is the
+   whole book, and each step right drops the bucket behind it. It is the
+   running answer to "what is still live if I write this lot off". */
+.tlt{display:block;margin-top:2px;font-size:12.5px;font-weight:700;color:#6b7684;letter-spacing:-.1px}
+.tlt b{font-weight:800;color:var(--ink)}
+.tlax{margin-top:4px}
+.tlax span{flex:1 1 0;min-width:0;text-align:right;padding-right:2px;
+  font-size:10px;font-weight:700;letter-spacing:.5px;color:#9aa4b2}
 .tv2band .sub{font-size:16px;font-weight:600;color:#8b95a6;letter-spacing:0}
 /* every tile has the same anatomy: label row, big number, bar, three stats */
 .tv2split{display:flex;margin-top:7px}
@@ -107,6 +142,7 @@ table.tv2t th.gh0 span{color:#7a63c4}
 table.tv2t th.gh1 span{color:#3f6cc9}
 table.tv2t th.gh2 span{color:#2f9558}
 table.tv2t th.gh3 span{color:#d9942c}
+table.tv2t th.gh4 span{color:#b03a2e}
 table.tv2t td{text-align:right;padding:0 6px;font-variant-numeric:tabular-nums;
   font-size:17.5px;font-weight:400;border-bottom:1px solid #f1f4f8}
 table.tv2t tr:last-child td{border-bottom:none}
@@ -359,6 +395,10 @@ export const TV2 = `
   // Two independent sort orders — each screen is ranked by the thing it shows.
   var BY_PIPE = ROSTER.slice().sort(function(a,b){ return (b[2]-a[2]) || (b[7]-a[7]); });
   var BY_TOTAL= ROSTER.slice().sort(function(a,b){ return (b[7]-a[7]) || (b[4]-a[4]); });
+  // Aging screen: biggest frozen book first. Ties break on pipeline size, so
+  // two AEs with nothing idle sort the same way they do everywhere else.
+  function idleOf(r){ return (r[10]||0)+(r[11]||0); }
+  var BY_IDLE = ROSTER.slice().sort(function(a,b){ return (idleOf(b)-idleOf(a)) || (b[2]-a[2]); });
   var SPLIT = Math.ceil(ROSTER.length/2);   // 40 AEs -> 20 left, 20 right
 
   // ---- header facts (mirrors the desktop header) ----
@@ -521,6 +561,67 @@ export const TV2 = `
        ['FUNDING DAY', elapsed+' of '+total],
        ['DAYS LEFT', String(remaining)]]);
   }
+  // Aging totals, summed over the roster actually drawn below rather than over
+  // the whole board, so the columns under these tiles add up to the numbers on
+  // them. The other tiles read board-wide totals, which is right for them and
+  // wrong here: the first thing anyone does with an aging number is check it.
+  function ageTotals(){
+    var t={pipe:0,i30:0,i60:0,hit:0,worst:0,n0:0,n30:0,n60:0,k0:0,k30:0,k60:0};
+    ROSTER.forEach(function(r){
+      var b30=r[10]||0, b60=r[11]||0, idle=b30+b60;
+      t.pipe += r[2]||0; t.i30 += b30; t.i60 += b60;
+      t.n0 += r[12]||0; t.n30 += r[13]||0; t.n60 += r[14]||0;
+      t.k0 += r[15]||0; t.k30 += r[16]||0; t.k60 += r[17]||0;
+      if(idle>0) t.hit++;
+      if(r[2]) t.worst = Math.max(t.worst, idle/r[2]*100);
+    });
+    t.idle = t.i30 + t.i60;
+    t.fresh = t.pipe - t.idle;              // under 30 days, the healthy part
+    t.loans = t.n0 + t.n30 + t.n60;
+    t.pct  = t.pipe ? t.idle/t.pipe*100 : 0;
+    return t;
+  }
+
+  // The pipeline tile on the aging screen answers the question that screen is
+  // for: how big is the book, and how much of it has stopped moving. 30D+ is
+  // everything idle thirty days or more; 60D+ is the part of that which is
+  // past sixty, so it is counted inside 30D+ rather than alongside it.
+  function tilePipeAge(){
+    var t=ageTotals();
+    // The third argument is the pipeline from this bucket forward to today,
+    // so the 60+ group carries the whole book and each step right sheds the
+    // bucket behind it. 234.83 - 20.46 = 214.37 - 21.72 = 192.65.
+    function seg(k, amt, n, total, totalN, lock, cls){
+      var lp = amt ? Math.round(lock/amt*100) : 0;
+      return '<div class="tlseg"><span class="tlk">'+k+'</span>'
+        +'<span class="tlv" style="color:'+cls+'">'+mM(amt)+'<em>'+n+' unit'+(n===1?'':'s')+'</em></span>'
+        +'<span class="tlt">TOTAL <b>'+mM(total)+'</b> &middot; '+totalN+' unit'+(totalN===1?'':'s')+'</span>'
+        +'<span class="tlk2">LOCKED <b>'+mM(lock)+'</b> &middot; '+lp+'%</span></div>';
+    }
+    return '<div class="card k-blue"><div class="krow"><span class="kl">SALES TEAM PIPELINE</span>'
+      +'<span class="pill mtd">'+t.loans+' loans</span></div>'
+      +'<div class="tl">'
+      +'<div class="tlrow">'
+        + seg('60+ DAYS',         t.i60,   t.n60, t.pipe,         t.loans,            t.k60, '#b03a2e')
+        + seg('30&ndash;60 DAYS', t.i30,   t.n30, t.pipe - t.i60, t.loans - t.n60,    t.k30, '#b06a00')
+        + seg('UNDER 30 DAYS',    t.fresh, t.n0,  t.fresh,        t.n0,               t.k0,  '#146c37')
+      +'</div>'
+      +'<div class="tlbar"><i style="background:#b03a2e"></i><i style="background:#d9942c"></i><i style="background:#1a9e4e"></i></div>'
+      +'<div class="tlax"><span>60 DAYS</span><span>30 DAYS</span><span>TODAY</span></div>'
+      +'</div></div>';
+  }
+
+  function tileIdle(){
+    var t=ageTotals();
+    return tile('k-amber', 'NO STATUS CHANGE IN 30 DAYS',
+      '<span class="pill mtd">'+(ROSTER.length-t.hit)+' AEs clear</span>',
+      mM(t.idle), '#b06a00', t.pct, '#d9942c', null,
+      [['30&ndash;59 DAYS', mM(t.i30)],
+       ['60+ DAYS', mM(t.i60)],
+       ['OF PIPELINE', t.pct.toFixed(1)+'%'],
+       ['WORST BOOK', Math.round(t.worst)+'%']]);
+  }
+
   function tileDeck(){
     // Headline is CTC+ itself — the loans actually sitting on the runway.
     // The bar runs against the same $100M goal as FUNDED PRODUCTION beside it,
@@ -609,6 +710,38 @@ export const TV2 = `
     return h+'</table>';
   }
 
+  // S3 — what has stopped moving. Deliberately shows both bands: the 60+ group
+  // is the problem, the 30-59 group is next month's problem, and hiding the
+  // second one means only ever seeing this too late.
+  function colS3(rows, startRank){
+    var h='<table class="tv2t"><colgroup>'
+      +'<col style="width:36px"><col style="width:258px"><col style="width:9px">'
+      +'<col style="width:120px"><col style="width:110px"><col style="width:9px">'
+      +'<col style="width:120px"><col style="width:120px"><col style="width:106px"></colgroup>';
+    h+='<tr><th class="l" colspan="2"></th><th class="sp"></th><th class="gh gh1" colspan="2"><span>PIPELINE</span></th><th class="sp"></th><th class="gh gh4" colspan="3"><span>NO STATUS CHANGE</span></th></tr>';
+    // Cumulative, not bands: 30D+ contains 60D+. A third column holding their
+    // sum was only ever arithmetic the reader can do, and it made people ask
+    // which of the three was the real number.
+    h+='<tr><th class="rk">RANK</th><th class="l">ACCOUNT EXECUTIVE</th><th class="sp"></th><th>PIPELINE</th><th>UNLOCKED</th><th class="sp"></th>'
+      +'<th>30D+</th><th>60D+</th><th>30D+ %</th></tr>';
+    rows.forEach(function(r,i){
+      var rank=startRank+i;
+      var n=r[0], pipe=r[2], pipeUn=r[9]||0, b60=r[11]||0;
+      // 30D+ is everything idle thirty days or more, the 60D+ files included.
+      var idle=(r[10]||0)+b60, pct = pipe ? Math.round(idle/pipe*100) : 0;
+      // A quarter of a book frozen reads as a problem; a tenth reads as normal.
+      var pcls = idle===0 ? ' z' : (pct>=25 ? ' b60' : '');
+      h+='<tr class="tv2row">'
+        +'<td class="rk">'+rank+'</td><td class="l"><span class="tv2name">'+n+'</span>'+rankTag(n)+newTag(n)+'</td><td class="sp"></td>'
+        +'<td><span class="tv2v'+(pipe?'':' z')+'">'+mM(pipe)+'</span></td>'
+        +'<td><span class="tv2v'+(pipeUn?'':' z')+'">'+mM(pipeUn)+'</span></td><td class="sp"></td>'
+        +'<td><span class="tv2v'+(idle?'':' z')+'">'+mM(idle)+'</span></td>'
+        +'<td><span class="tv2v'+(b60?' b60':' z')+'">'+mM(b60)+'</span></td>'
+        +'<td><span class="tv2v'+pcls+'">'+(idle?pct+'%':'&ndash;')+'</span></td></tr>';
+    });
+    return h+'</table>';
+  }
+
   var TIERLBL=[['#127a3c','$15M+'],['#dcf3e4','$10M+'],['#fbf2c9','$7.5M+'],['#fbdedb','under $7.5M']];
   var LEGEND='<div class="tv2lgd">'+TIERLBL.map(function(t){
     return '<span><i style="background:'+t[0]+(t[0]==='#127a3c'?'':';box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)')+'"></i>'+t[1]+'</span>';
@@ -616,9 +749,14 @@ export const TV2 = `
 
   var SCREENS=[
     {id:'s1', name:'TODAY &amp; PIPELINE',   sub:'RANKED BY PIPELINE SIZE',        data:BY_PIPE,  band:function(){return tileGoal()+tilePipe();},   col:colS1, legend:true},
-    {id:'s2', name:'FUNDED &amp; ON DECK',   sub:'RANKED BY FUNDED + CTC+ TOTAL',  data:BY_TOTAL, band:function(){return tileFunded()+tileDeck();}, col:colS2}
+    {id:'s2', name:'FUNDED &amp; ON DECK',   sub:'RANKED BY FUNDED + CTC+ TOTAL',  data:BY_TOTAL, band:function(){return tileFunded()+tileDeck();}, col:colS2},
+    // solo: built, but kept out of the rotation. Aging moves on a weekly
+    // cadence and does not earn a turn every thirty seconds between two
+    // screens that change hourly. It is a screen you go and look at.
+    {id:'s3', name:'AGING',                 sub:'RANKED BY 30D+ NO CHANGE',       data:BY_IDLE,  band:function(){return tilePipeAge()+tileIdle();},col:colS3, solo:true, bandCls:'tall'}
   ];
   if(PIN){ var f=SCREENS.filter(function(s){return s.id===PIN;}); if(f.length) SCREENS=f; }
+  else   { SCREENS=SCREENS.filter(function(s){return !s.solo;}); }
 
   function draw(idx){
     var s=SCREENS[idx];
@@ -637,7 +775,7 @@ export const TV2 = `
       +'<div class="s2">'+s.sub+' &middot; '+ROSTER.length+' AES</div>'
       +'<div class="tv2dots">'+dots+'</div></div></div>';
     board.innerHTML = hdr
-      + '<div class="tv2band">'+s.band()+'</div>'
+      + '<div class="tv2band'+(s.bandCls?' '+s.bandCls:'')+'">'+s.band()+'</div>'
       + '<div class="tv2grid"><div class="tv2col">'+s.col(L,1)+'</div><div class="tv2col">'+s.col(R,SPLIT+1)+'</div></div>'
       + (s.legend ? LEGEND : '');
 
