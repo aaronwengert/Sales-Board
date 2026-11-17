@@ -395,10 +395,6 @@ export const TV2 = `
   // Two independent sort orders — each screen is ranked by the thing it shows.
   var BY_PIPE = ROSTER.slice().sort(function(a,b){ return (b[2]-a[2]) || (b[7]-a[7]); });
   var BY_TOTAL= ROSTER.slice().sort(function(a,b){ return (b[7]-a[7]) || (b[4]-a[4]); });
-  // Aging screen: biggest frozen book first. Ties break on pipeline size, so
-  // two AEs with nothing idle sort the same way they do everywhere else.
-  function idleOf(r){ return (r[10]||0)+(r[11]||0); }
-  var BY_IDLE = ROSTER.slice().sort(function(a,b){ return (idleOf(b)-idleOf(a)) || (b[2]-a[2]); });
   var SPLIT = Math.ceil(ROSTER.length/2);   // 40 AEs -> 20 left, 20 right
 
   // ---- header facts (mirrors the desktop header) ----
@@ -753,7 +749,7 @@ export const TV2 = `
     // solo: built, but kept out of the rotation. Aging moves on a weekly
     // cadence and does not earn a turn every thirty seconds between two
     // screens that change hourly. It is a screen you go and look at.
-    {id:'s3', name:'AGING',                 sub:'RANKED BY 30D+ NO CHANGE',       data:BY_IDLE,  band:function(){return tilePipeAge()+tileIdle();},col:colS3, solo:true, bandCls:'tall'}
+    {id:'s3', name:'AGING',                 sub:'RANKED BY PIPELINE SIZE',        data:BY_PIPE,  band:function(){return tilePipeAge()+tileIdle();},col:colS3, solo:true, bandCls:'tall'}
   ];
   if(PIN){ var f=SCREENS.filter(function(s){return s.id===PIN;}); if(f.length) SCREENS=f; }
   else   { SCREENS=SCREENS.filter(function(s){return !s.solo;}); }
