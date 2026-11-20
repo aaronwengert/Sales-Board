@@ -11,8 +11,10 @@ import { pinToken, AUTH_COOKIE } from "@/lib/pin";
 // check — the PIN cookie OR a REPORT_KEY query parameter. A scheduled job has
 // no cookie, so redirecting it to /unlock would break automation; those two
 // routes reject unauthorized callers themselves rather than deferring to this.
+// /api/metrics is excluded for the same reason: Mission Control calls it server
+// to server with the METRICS_KEY header, and the route rejects anyone without it.
 export const config = {
-  matcher: ["/((?!api/unlock|api/report|api/digest|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
+  matcher: ["/((?!api/unlock|api/report|api/digest|api/metrics|unlock|_next/static|_next/image|favicon.ico|logo.png).*)"],
 };
 
 export async function middleware(req: NextRequest) {
